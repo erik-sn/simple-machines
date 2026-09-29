@@ -646,7 +646,7 @@ export const screwScene: SceneDefinition = {
             spring.getLength() -
             Vec2.distance(spring.getAnchorA(), spring.getAnchorB());
         }
-        if (context.handPart === screwPart) {
+        if (context.handPart === screwPart && context.handIsReader) {
           // Effort is the part of the hand's force that turns the bar, taken
           // at the bar's end where the hand holds it.
           const along = screw.getWorldVector(new Vec2(1, 0));

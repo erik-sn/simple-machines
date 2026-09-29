@@ -290,7 +290,7 @@ body {
   .marginalia {
     left: 0;
     right: 0;
-    top: 55svh;
+    top: 60svh;
     bottom: auto;
     display: flex;
     flex-wrap: wrap;

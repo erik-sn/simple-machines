@@ -429,7 +429,7 @@ export const wedgeScene: SceneDefinition = {
         },
       ],
       step(context) {
-        if (context.handPart === wedgePart) {
+        if (context.handPart === wedgePart && context.handIsReader) {
           // Effort is the blow along the wedge: the downward part of the
           // hand's force. Lifting it out is not effort.
           effortSampler.push(Math.max(0, -context.handForce.y));

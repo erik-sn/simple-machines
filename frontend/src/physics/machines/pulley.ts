@@ -838,7 +838,7 @@ export const pulleyScene: SceneDefinition = {
         },
       ],
       step(context) {
-        if (context.handPart === handlePart) {
+        if (context.handPart === handlePart && context.handIsReader) {
           // Effort is the hand's pull along the rope; the guide takes the rest.
           effortSampler.push(Math.abs(context.handForce.y));
           effortNow = effortSampler.mean();

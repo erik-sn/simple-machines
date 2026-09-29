@@ -462,7 +462,7 @@ export const wheelAndAxleScene: SceneDefinition = {
         { id: "shaft", kind: "shaft", part: "wheel", at: ZERO, role: "either" },
       ],
       step(context) {
-        if (context.handPart === wheelPart) {
+        if (context.handPart === wheelPart && context.handIsReader) {
           // Only the part of the hand's force across the radius turns the
           // wheel; a hold at the very centre has no leverage to measure.
           const anchor = context.handAnchor;

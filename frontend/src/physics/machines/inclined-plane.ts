@@ -393,7 +393,11 @@ export const inclinedPlaneScene: SceneDefinition = {
             pusherActive = active;
           }
         }
-        if (held !== null && (held === blockPart || held === pusherPart)) {
+        if (
+          held !== null &&
+          context.handIsReader &&
+          (held === blockPart || held === pusherPart)
+        ) {
           // Effort is the hand's force along the slope; the ramp bears the rest.
           const along =
             context.handForce.x * layout.along.x +
