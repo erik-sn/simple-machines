@@ -725,7 +725,13 @@ export const screwScene: SceneDefinition = {
         y: HEAD_Y + radius * Math.sin(angle),
       });
     }
-    return { partId: "screw", frames, rest: REST };
+    // Hold, let go so the jack shows whether it locks or unwinds, then rest.
+    return {
+      partId: "screw",
+      frames,
+      release: PREROLL + TURN_STEPS + REST,
+      rest: REST + 120,
+    };
   },
 };
 

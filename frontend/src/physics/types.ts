@@ -19,23 +19,40 @@ export interface Pose {
 // Which ink a shape is drawn in; the theme decides the colour and weight.
 export type Stroke = "ink" | "soft" | "faint" | "accent";
 
+// A dashed line type of technical drawing; the ink theme leaves it plain.
+export type Dash = "center" | "hidden";
+
 export type Shape =
-  | { kind: "segment"; from: Vec; to: Vec; stroke?: Stroke; weight?: number }
+  | {
+      kind: "segment";
+      from: Vec;
+      to: Vec;
+      stroke?: Stroke;
+      weight?: number;
+      dash?: Dash;
+    }
   | {
       kind: "polygon";
       points: readonly Vec[];
       closed?: boolean;
+      // A filled polygon is hatched. An engraver hatches only the shadow
+      // side: draw a thin band polygon with fill and no outline for that.
       fill?: boolean;
+      outline?: boolean;
+      hatch?: { angle: number };
       stroke?: Stroke;
       weight?: number;
+      dash?: Dash;
     }
   | {
       kind: "circle";
       center: Vec;
       radius: number;
       fill?: boolean;
+      hatch?: { angle: number };
       stroke?: Stroke;
       weight?: number;
+      dash?: Dash;
     }
   | {
       kind: "arc";
@@ -46,6 +63,7 @@ export type Shape =
       end: number;
       stroke?: Stroke;
       weight?: number;
+      dash?: Dash;
     };
 
 // One rigid body and its drawing, in body-local coordinates.
@@ -75,6 +93,11 @@ export interface StepContext {
   // The force the hand is exerting this step, in newtons; zero when idle.
   handForce: Vec;
   handPart: Part | null;
+  // Where on the part the hand holds, in world metres; null when idle.
+  handAnchor: Vec | null;
+  // True when the reader holds the part; false for the unseen hand of a
+  // still plate or a demonstration, whose effort is not the reader's.
+  handIsReader: boolean;
 }
 
 // Where a machine can be joined to another in the Theatre
@@ -132,6 +155,9 @@ export interface Script {
   partId: string;
   frames: readonly Keyframe[];
   rest: number;
+  // The step at which the hand lets go, if before the reset: what the
+  // machine does on its own (locks, unwinds, falls) is part of the lesson.
+  release?: number;
 }
 
 // Where the unseen hand holds a still plate at rest.

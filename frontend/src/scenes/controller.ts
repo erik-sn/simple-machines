@@ -1,4 +1,4 @@
-import { type Body, World } from "planck";
+import { type Body, Vec2, World } from "planck";
 import type { StageMode } from "../book/chapters";
 import { Hand } from "../physics/hand";
 import { DT, Loop } from "../physics/loop";
@@ -46,7 +46,7 @@ function scriptFor(
   if (mode === "driven" && definition.script !== undefined) {
     return definition.script(values, variant);
   }
-  if (mode === "still" && definition.hold !== undefined) {
+  if ((mode === "still" || mode === "free") && definition.hold !== undefined) {
     const hold = definition.hold(values, variant);
     return {
       partId: hold.partId,
@@ -73,10 +73,12 @@ export class SceneController {
   private readonly loop: Loop;
   private readonly partElements = new Map<string, SVGGElement>();
   private readonly ropeElements = new Map<string, SVGPathElement>();
+  private hintElement: SVGGElement | null = null;
   private readonly script: Script | null;
   private scriptStep = 0;
   private scriptActive: boolean;
   private grabbedOnce = false;
+  private readerHolding = false;
   private started = false;
 
   constructor(
@@ -132,6 +134,11 @@ export class SceneController {
     }
   }
 
+  // The manicule that marks where to take hold; it follows the part.
+  attachHint(element: SVGGElement | null): void {
+    this.hintElement = element;
+  }
+
   attachRope(id: string, element: SVGPathElement | null): void {
     if (element === null) {
       this.ropeElements.delete(id);
@@ -167,6 +174,7 @@ export class SceneController {
     if (part === null) {
       return false;
     }
+    this.readerHolding = true;
     this.loop.paused = false;
     if (!this.grabbedOnce) {
       this.grabbedOnce = true;
@@ -181,6 +189,7 @@ export class SceneController {
 
   release(): void {
     this.hand.release();
+    this.readerHolding = false;
   }
 
   private beforeStep(step: number): void {
@@ -192,6 +201,8 @@ export class SceneController {
       step,
       handForce: this.hand.force(DT),
       handPart: this.hand.part,
+      handAnchor: this.hand.anchor(),
+      handIsReader: this.readerHolding && this.hand.part !== null,
     });
     if (step % READOUT_EVERY === 0) {
       this.readouts.publish(this.machine.readouts());
@@ -205,7 +216,13 @@ export class SceneController {
     }
     const target = targetAt(script.frames, this.scriptStep);
     const last = script.frames[script.frames.length - 1];
-    if (target !== null) {
+    const released =
+      script.release !== undefined && this.scriptStep >= script.release;
+    if (released) {
+      if (this.hand.part !== null) {
+        this.hand.release();
+      }
+    } else if (target !== null) {
       if (this.scriptStep === 0) {
         this.hand.holdPart(part, target);
       } else {
@@ -229,6 +246,20 @@ export class SceneController {
         "transform",
         `translate(${pose.x.toFixed(5)} ${pose.y.toFixed(5)}) rotate(${((pose.angle * 180) / Math.PI).toFixed(4)})`,
       );
+    }
+    const hint = this.hintElement;
+    if (hint !== null) {
+      const part = this.machine.parts.find((p) => p.grab !== undefined);
+      if (part?.grab !== undefined) {
+        const at = part.body.getWorldPoint(
+          new Vec2(part.grab.hintAt.x, part.grab.hintAt.y),
+        );
+        // Finger up, tip just under the point the hand may take.
+        hint.setAttribute(
+          "transform",
+          `translate(${(at.x - 0.108).toFixed(4)} ${(at.y - 0.52).toFixed(4)}) rotate(90) scale(0.012 -0.012)`,
+        );
+      }
     }
     for (const rope of this.machine.ropes) {
       const element = this.ropeElements.get(rope.id);

@@ -10,15 +10,19 @@ import type { ThemeId } from "../theme/themes";
 //
 // rough.js assumes pixel-sized units (its ellipse jitter is one unit times
 // roughness and its hatch gap is clamped to 0.1), so geometry is generated at
-// SCALE units per metre and the output is scaled back.
+// SCALE units per metre and the output is scaled back. Hatching is a pen
+// spacing, not a length in the world, so the gap follows the screen scale.
 
 export interface InkPath {
   d: string;
   stroke: Stroke | "hatch";
   fill: boolean;
+  dash?: "center" | "hidden";
 }
 
 const SCALE = 100;
+const HATCH_PX = 3.5;
+const HATCH_PX_GRAPH = 4;
 const generator = rough.generator();
 
 // FNV-1a over the key, folded into rough.js's seed range.
@@ -31,7 +35,48 @@ export function seedFrom(key: string): number {
   return ((hash >>> 0) % 2147483646) + 1;
 }
 
-function pen(theme: ThemeId, seed: number): Options {
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
+// The longest side of the shape, in metres.
+function extentOf(shape: Shape): number {
+  switch (shape.kind) {
+    case "segment":
+      return Math.hypot(shape.to.x - shape.from.x, shape.to.y - shape.from.y);
+    case "polygon": {
+      let minX = Number.POSITIVE_INFINITY;
+      let maxX = Number.NEGATIVE_INFINITY;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      for (const p of shape.points) {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+      }
+      return Math.max(maxX - minX, maxY - minY);
+    }
+    case "circle":
+    case "arc":
+      return shape.radius * 2;
+    default: {
+      const never: never = shape;
+      throw new Error(`Unknown shape ${JSON.stringify(never)}`);
+    }
+  }
+}
+
+function pen(
+  theme: ThemeId,
+  seed: number,
+  shape: Shape,
+  pxPerMetre: number,
+): Options {
+  // A small mark gets a steadier hand: a pin is the cleanest mark on a plate.
+  const k = clamp((extentOf(shape) * SCALE) / 40, 0.3, 1);
+  const hatchAngle =
+    "hatch" in shape && shape.hatch !== undefined ? shape.hatch.angle : null;
   const shared: Options = {
     seed,
     disableMultiStroke: true,
@@ -39,8 +84,6 @@ function pen(theme: ThemeId, seed: number): Options {
     preserveVertices: true,
     curveStepCount: 18,
     curveFitting: 0.95,
-    hachureAngle: -35,
-    hachureGap: 2.2,
     fillWeight: 0.5,
     strokeWidth: 1,
   };
@@ -48,16 +91,20 @@ function pen(theme: ThemeId, seed: number): Options {
     case "ink":
       return {
         ...shared,
-        roughness: 0.8,
+        roughness: 0.8 * k,
         bowing: 0.8,
-        maxRandomnessOffset: 1.2,
+        maxRandomnessOffset: 1.2 * k,
+        hachureAngle: hatchAngle ?? -35,
+        hachureGap: clamp((HATCH_PX / pxPerMetre) * SCALE, 1.5, 8),
       };
     case "fusion":
       return {
         ...shared,
-        roughness: 0.4,
+        roughness: 0.5 * k,
         bowing: 0.4,
-        maxRandomnessOffset: 0.8,
+        maxRandomnessOffset: 0.8 * k,
+        hachureAngle: hatchAngle ?? -35,
+        hachureGap: clamp((HATCH_PX / pxPerMetre) * SCALE, 1.5, 8),
       };
     case "graph":
       return {
@@ -65,8 +112,8 @@ function pen(theme: ThemeId, seed: number): Options {
         roughness: 0,
         bowing: 0,
         maxRandomnessOffset: 0,
-        hachureAngle: 45,
-        hachureGap: 3.5,
+        hachureAngle: hatchAngle ?? 45,
+        hachureGap: clamp((HATCH_PX_GRAPH / pxPerMetre) * SCALE, 1.5, 8),
       };
     default: {
       const never: never = theme;
@@ -154,24 +201,44 @@ function opsToPath(set: OpSet): string {
   return d.trim();
 }
 
+// pxPerMetre is the screen scale of the scene, so the hatch keeps its pen
+// spacing on any viewport; callers quantize it so a resize does not
+// regenerate every shape.
 export function renderShape(
   theme: ThemeId,
   shape: Shape,
   key: string,
+  pxPerMetre = 200,
 ): InkPath[] {
-  const drawable = drawableFor(shape, pen(theme, seedFrom(key)));
+  const drawable = drawableFor(
+    shape,
+    pen(theme, seedFrom(key), shape, pxPerMetre),
+  );
   const stroke = shape.stroke ?? "ink";
+  const outline = !("outline" in shape) || shape.outline !== false;
   const paths: InkPath[] = [];
   for (const set of drawable.sets) {
+    if (set.type === "path" && !outline) {
+      continue;
+    }
     const d = opsToPath(set);
     if (d === "") {
       continue;
     }
-    paths.push({
+    const path: InkPath = {
       d,
       stroke: set.type === "fillSketch" ? "hatch" : stroke,
       fill: set.type === "fillPath",
-    });
+    };
+    if (shape.dash !== undefined) {
+      path.dash = shape.dash;
+    }
+    paths.push(path);
   }
   return paths;
 }
+
+// The pointing hand of a Renaissance margin (a manicule): drawn in ink at the
+// place the reader may take hold. In a 40 by 28 box, finger to the right.
+export const MANICULE_PATH =
+  "M 9 8 C 12 5, 18 5, 21 8 L 36 7.5 C 38.5 7.5, 38.5 11, 36 11 L 22 11.5 C 22.5 13.5, 21 15, 19 15.5 C 21 17.5, 20 19.5, 18 20 C 19 22, 17.5 24, 15 24 C 12 24, 10 22.5, 9 21 Z M 2 7 L 9 7 L 9 22 L 2 22 Z M 19 15.5 L 14 15.5 M 18 20 L 13.5 20";

@@ -1,13 +1,10 @@
 import {
-  type Body,
   Box,
   Circle,
   GearJoint,
-  MouseJoint,
   PrismaticJoint,
   RevoluteJoint,
   Vec2,
-  type World,
 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
 import { ForceSampler } from "../sampler";
@@ -166,21 +163,6 @@ function formatNewtons(value: number): string {
 
 function formatMetres(value: number): string {
   return `${value.toFixed(2)} m`;
-}
-
-// The point the hand holds on the body: the mouse joint's anchor, found in
-// the world's joint list because the hand keeps its joint to itself.
-function handAnchorOn(world: World, body: Body): Vec2 {
-  for (
-    let joint = world.getJointList();
-    joint !== null;
-    joint = joint.getNext()
-  ) {
-    if (joint.getType() === MouseJoint.TYPE && joint.getBodyB() === body) {
-      return joint.getAnchorB();
-    }
-  }
-  throw new Error("The hand holds the wheel but has no joint on it");
 }
 
 function wheelShapes(
@@ -483,7 +465,10 @@ export const wheelAndAxleScene: SceneDefinition = {
         if (context.handPart === wheelPart) {
           // Only the part of the hand's force across the radius turns the
           // wheel; a hold at the very centre has no leverage to measure.
-          const anchor = handAnchorOn(world, wheel);
+          const anchor = context.handAnchor;
+          if (anchor === null) {
+            throw new Error("The hand holds the wheel but has no anchor");
+          }
           const centre = wheel.getPosition();
           const rx = anchor.x - centre.x;
           const ry = anchor.y - centre.y;

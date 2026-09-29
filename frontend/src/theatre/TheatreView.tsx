@@ -259,6 +259,11 @@ function Bench({
     height: viewHeight,
   };
 
+  const pxPerMetre = Math.max(
+    20,
+    Math.round(size.width / viewBox.width / 10) * 10,
+  );
+
   function toWorld(event: PointerEvent<SVGSVGElement>): Vec {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
@@ -504,16 +509,19 @@ function Bench({
               >
                 <g className="ink-static">
                   {machine.statics.flatMap((shape, index) =>
-                    renderShape(theme, shape, `${node.id}:static:${index}`).map(
-                      (path) => (
-                        <path
-                          key={path.d}
-                          d={path.d}
-                          data-stroke={path.stroke}
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ),
-                    ),
+                    renderShape(
+                      theme,
+                      shape,
+                      `${node.id}:static:${index}`,
+                      pxPerMetre,
+                    ).map((path) => (
+                      <path
+                        key={path.d}
+                        d={path.d}
+                        data-stroke={path.stroke}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    )),
                   )}
                 </g>
                 <g className="ink-ropes">
@@ -527,7 +535,7 @@ function Bench({
                         )
                       }
                       d=""
-                      data-stroke={rope.stroke ?? "soft"}
+                      data-stroke={rope.stroke ?? "ink"}
                       vectorEffect="non-scaling-stroke"
                     />
                   ))}
@@ -550,16 +558,19 @@ function Bench({
                         }
                       >
                         {part.shapes.flatMap((shape, index) =>
-                          renderShape(theme, shape, `${part.id}:${index}`).map(
-                            (path) => (
-                              <path
-                                key={path.d}
-                                d={path.d}
-                                data-stroke={path.stroke}
-                                vectorEffect="non-scaling-stroke"
-                              />
-                            ),
-                          ),
+                          renderShape(
+                            theme,
+                            shape,
+                            `${part.id}:${index}`,
+                            pxPerMetre,
+                          ).map((path) => (
+                            <path
+                              key={path.d}
+                              d={path.d}
+                              data-stroke={path.stroke}
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          )),
                         )}
                         {machine.ports
                           .filter((port) => port.part === part.id)

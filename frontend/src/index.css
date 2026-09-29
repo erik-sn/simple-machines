@@ -228,8 +228,8 @@ body {
 
 /* The drawing draws itself when a page opens. */
 @media (prefers-reduced-motion: no-preference) {
-  .ink-static path,
-  .ink-dynamic path {
+  .ink-static path:not([data-dash]),
+  .ink-dynamic path:not([data-dash]) {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
     animation: 900ms ease-out both draw-on;
@@ -246,18 +246,29 @@ body {
   }
 }
 
-/* Where the hand may take hold: a quiet ring in faded ink, decoration only. */
-.grab-hint {
+/* Where the hand may take hold: a manicule in faded ink, decoration only. */
+.manicule path {
   fill: none;
   stroke: var(--ink-faint);
-  stroke-width: 1px;
-  stroke-dasharray: 3 4;
-  opacity: 0.8;
+  stroke-width: 1.3px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.85;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .grab-hint {
+  .manicule path {
     animation: 4000ms ease-in-out infinite breathe;
   }
+}
+
+/* Technical line types; the ink theme leaves them as plain hairlines. */
+:root[data-theme="graph"] .ink path[data-dash="center"],
+:root[data-theme="fusion"] .ink path[data-dash="center"] {
+  stroke-dasharray: 18 3 3 3;
+}
+:root[data-theme="graph"] .ink path[data-dash="hidden"],
+:root[data-theme="fusion"] .ink path[data-dash="hidden"] {
+  stroke-dasharray: 4 2;
 }
 
 @keyframes breathe {

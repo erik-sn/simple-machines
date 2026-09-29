@@ -1,6 +1,6 @@
 import { type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import type { SceneRef, StageMode } from "../book/chapters";
-import { renderShape } from "../ink/render";
+import { MANICULE_PATH, renderShape } from "../ink/render";
 import type { SceneDefinition, Vec } from "../physics/types";
 import { useTheme } from "../theme/ThemeProvider";
 import { SceneController } from "./controller";
@@ -75,6 +75,12 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
     height: viewHeight,
   };
 
+  // Quantized so an ordinary resize does not regenerate every stroke.
+  const pxPerMetre = Math.max(
+    20,
+    Math.round(size.width / viewBox.width / 10) * 10,
+  );
+
   function toWorld(event: PointerEvent<SVGSVGElement>): Vec {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
@@ -131,15 +137,18 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
         <g transform="scale(1 -1)">
           <g className="ink-static">
             {controller.initialMachine.statics.flatMap((shape, index) =>
-              renderShape(theme, shape, `static:${index}`).map((path) => (
-                <path
-                  key={path.d}
-                  d={path.d}
-                  pathLength={1}
-                  data-stroke={path.stroke}
-                  vectorEffect="non-scaling-stroke"
-                />
-              )),
+              renderShape(theme, shape, `static:${index}`, pxPerMetre).map(
+                (path) => (
+                  <path
+                    key={path.d}
+                    d={path.d}
+                    pathLength={1}
+                    data-stroke={path.stroke}
+                    data-dash={path.dash}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ),
+              ),
             )}
           </g>
           <g className="ink-ropes">
@@ -148,7 +157,7 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
                 key={rope.id}
                 ref={(element) => controller.attachRope(rope.id, element)}
                 d=""
-                data-stroke={rope.stroke ?? "soft"}
+                data-stroke={rope.stroke ?? "ink"}
                 vectorEffect="non-scaling-stroke"
               />
             ))}
@@ -166,31 +175,34 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
                   }
                 >
                   {part.shapes.flatMap((shape, index) =>
-                    renderShape(theme, shape, `${part.id}:${index}`).map(
-                      (path) => (
-                        <path
-                          key={path.d}
-                          d={path.d}
-                          pathLength={1}
-                          data-stroke={path.stroke}
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ),
-                    ),
-                  )}
-                  {part.grab !== undefined && hintVisible && (
-                    <circle
-                      className="grab-hint"
-                      cx={part.grab.hintAt.x}
-                      cy={part.grab.hintAt.y}
-                      r={0.18}
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    renderShape(
+                      theme,
+                      shape,
+                      `${part.id}:${index}`,
+                      pxPerMetre,
+                    ).map((path) => (
+                      <path
+                        key={path.d}
+                        d={path.d}
+                        pathLength={1}
+                        data-stroke={path.stroke}
+                        data-dash={path.dash}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    )),
                   )}
                 </g>
               );
             })}
           </g>
+          {hintVisible && (
+            <g
+              ref={(element) => controller.attachHint(element)}
+              className="manicule"
+            >
+              <path d={MANICULE_PATH} vectorEffect="non-scaling-stroke" />
+            </g>
+          )}
         </g>
       </svg>
       {scene.kind !== "frontispiece" && (

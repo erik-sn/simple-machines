@@ -241,6 +241,8 @@ export class TheatreController {
         step,
         handForce,
         handPart: this.hand.part,
+        handAnchor: this.hand.anchor(),
+        handIsReader: this.hand.part !== null,
       });
     }
     if (step % READOUT_EVERY === 0) {

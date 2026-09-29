@@ -96,6 +96,15 @@ export class Hand {
     this.held = null;
   }
 
+  // Where the hand holds the part, in world metres.
+  anchor(): Vec | null {
+    if (this.joint === null) {
+      return null;
+    }
+    const p = this.joint.getAnchorB();
+    return { x: p.x, y: p.y };
+  }
+
   // The force on the held part during the last step, in newtons.
   force(dt: number): Vec {
     if (this.joint === null) {
