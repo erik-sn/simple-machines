@@ -3,7 +3,7 @@
 _commit: v0.16.0
 _src_path: git@github.com:erik-sn/bootstrap.git
 description: Creating simple machines
-github_owner: github.com/erik-sn/simple-machines
+github_owner: erik-sn
 include_backend: false
 include_frontend: true
 include_rust: false
