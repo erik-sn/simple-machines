@@ -16,7 +16,7 @@ export function Chrome({ showHint, onOpenSettings, onOpenAbout }: Props) {
       <button
         type="button"
         onClick={onOpenAbout}
-        className="font-display text-ink-soft hover:text-ink text-sm uppercase tracking-widest"
+        className="font-display text-ink-soft hover:text-ink text-step--1 lowercase tracking-widest"
       >
         About
       </button>
@@ -34,9 +34,10 @@ export function Chrome({ showHint, onOpenSettings, onOpenAbout }: Props) {
           <p
             id={hintId}
             role="tooltip"
-            className="font-body text-ink absolute top-full right-0 mt-2 w-48 text-right text-sm leading-snug"
+            className="gear-note font-body text-ink-faint text-step--1 absolute top-full right-0 mt-1 w-48 text-right italic leading-snug"
           >
-            Tune the physics of this page here.
+            <span aria-hidden="true">☞ </span>
+            the paper and the physics are tuned here
           </p>
         )}
       </div>

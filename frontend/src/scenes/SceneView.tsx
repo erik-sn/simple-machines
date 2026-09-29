@@ -1,10 +1,11 @@
 import { type PointerEvent, useLayoutEffect, useRef, useState } from "react";
 import type { SceneRef, StageMode } from "../book/chapters";
+import { renderShape } from "../ink/render";
 import type { SceneDefinition, Vec } from "../physics/types";
+import { useTheme } from "../theme/ThemeProvider";
 import { SceneController } from "./controller";
 import { Marginalia } from "./Marginalia";
 import type { SettingValues } from "./settings";
-import { shapeToPath } from "./shapes";
 
 interface Props {
   definition: SceneDefinition;
@@ -32,6 +33,7 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
   const dragging = useRef(false);
   const [size, setSize] = useState<Size>({ width: 16, height: 9 });
   const [hintVisible, setHintVisible] = useState(mode !== "driven");
+  const { theme } = useTheme();
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -63,12 +65,14 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
   }, [controller]);
 
   const { camera } = definition;
-  const viewWidth = camera.height * (size.width / size.height);
+  const aspect = size.width / size.height;
+  const viewHeight = Math.max(camera.height, camera.width / aspect);
+  const viewWidth = viewHeight * aspect;
   const viewBox = {
     x: camera.x - viewWidth / 2,
-    y: -camera.y - camera.height / 2,
+    y: -camera.y - viewHeight / 2,
     width: viewWidth,
-    height: camera.height,
+    height: viewHeight,
   };
 
   function toWorld(event: PointerEvent<SVGSVGElement>): Vec {
@@ -126,16 +130,17 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
       >
         <g transform="scale(1 -1)">
           <g className="ink-static">
-            {controller.initialMachine.statics.map((shape) => (
-              <path
-                key={shapeToPath(shape)}
-                d={shapeToPath(shape)}
-                pathLength={1}
-                data-stroke={shape.stroke ?? "ink"}
-                data-fill={"fill" in shape && shape.fill ? "" : undefined}
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
+            {controller.initialMachine.statics.flatMap((shape, index) =>
+              renderShape(theme, shape, `static:${index}`).map((path) => (
+                <path
+                  key={path.d}
+                  d={path.d}
+                  pathLength={1}
+                  data-stroke={path.stroke}
+                  vectorEffect="non-scaling-stroke"
+                />
+              )),
+            )}
           </g>
           <g className="ink-ropes">
             {controller.initialMachine.ropes.map((rope) => (
@@ -160,16 +165,19 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
                     part.grab !== undefined ? "cursor-grab" : undefined
                   }
                 >
-                  {part.shapes.map((shape) => (
-                    <path
-                      key={shapeToPath(shape)}
-                      d={shapeToPath(shape)}
-                      pathLength={1}
-                      data-stroke={shape.stroke ?? "ink"}
-                      data-fill={"fill" in shape && shape.fill ? "" : undefined}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  ))}
+                  {part.shapes.flatMap((shape, index) =>
+                    renderShape(theme, shape, `${part.id}:${index}`).map(
+                      (path) => (
+                        <path
+                          key={path.d}
+                          d={path.d}
+                          pathLength={1}
+                          data-stroke={path.stroke}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ),
+                    ),
+                  )}
                   {part.grab !== undefined && hintVisible && (
                     <circle
                       className="grab-hint"

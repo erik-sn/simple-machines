@@ -19,7 +19,7 @@ const READOUT_EVERY = 6;
 
 function targetAt(frames: readonly Keyframe[], step: number): Vec | null {
   const last = frames[frames.length - 1];
-  if (last === undefined || step > last.step) {
+  if (last === undefined) {
     return null;
   }
   const nextIndex = frames.findIndex((k) => k.step > step);
@@ -33,6 +33,28 @@ function targetAt(frames: readonly Keyframe[], step: number): Vec | null {
   }
   const t = (step - a.step) / (b.step - a.step);
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+// A driven stage plays the scene's demonstration; a still plate is held at
+// rest by the unseen hand until the reader takes hold of it themselves.
+function scriptFor(
+  definition: SceneDefinition,
+  values: SettingValues,
+  variant: string | undefined,
+  mode: StageMode,
+): Script | null {
+  if (mode === "driven" && definition.script !== undefined) {
+    return definition.script(values, variant);
+  }
+  if (mode === "still" && definition.hold !== undefined) {
+    const hold = definition.hold(values, variant);
+    return {
+      partId: hold.partId,
+      frames: [{ step: 0, x: hold.at.x, y: hold.at.y }],
+      rest: Number.POSITIVE_INFINITY,
+    };
+  }
+  return null;
 }
 
 // Owns one scene's world, hand, demonstration, and frame loop, and writes the
@@ -69,18 +91,13 @@ export class SceneController {
     this.buildWorld();
     this.initialMachine = this.machine;
     this.initialParts = this.machine.parts;
-    this.script =
-      mode === "driven" && definition.script !== undefined
-        ? definition.script(values, variant)
-        : null;
+    this.script = scriptFor(definition, values, variant, mode);
     this.scriptActive = this.script !== null;
     this.loop = new Loop(
       this.world,
       (step) => this.beforeStep(step),
       (poseOf) => this.draw(poseOf),
     );
-    // A still page is a drawing until it is touched.
-    this.loop.paused = mode === "still";
     this.readouts.publish(this.machine.readouts());
   }
 
@@ -193,8 +210,6 @@ export class SceneController {
       } else {
         this.hand.move(target);
       }
-    } else if (this.hand.part !== null) {
-      this.hand.release();
     }
     this.scriptStep += 1;
     if (last !== undefined && this.scriptStep > last.step + script.rest) {

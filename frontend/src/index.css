@@ -1,8 +1,17 @@
 @import "tailwindcss";
+@import "@fontsource/im-fell-english/400.css";
+@import "@fontsource/im-fell-english/400-italic.css";
+@import "@fontsource/im-fell-english-sc/400.css";
+@import "@fontsource/im-fell-french-canon/400.css";
+@import "@fontsource-variable/eb-garamond/index.css";
+@import "@fontsource/b612/400.css";
+@import "@fontsource/b612/400-italic.css";
+@import "@fontsource/b612-mono/400.css";
 
 /* Theme tokens. Every theme defines the same variables on <html data-theme>;
    Tailwind utilities read them through @theme inline, so bg-paper, text-ink,
-   font-display and the rest follow the active theme without a rebuild. */
+   font-display and the rest follow the active theme without a rebuild.
+   Palette and contrast tables: docs/research/aesthetics.md, 1.7 and 6.6. */
 @theme inline {
   --color-paper: var(--paper);
   --color-paper-deep: var(--paper-deep);
@@ -11,41 +20,72 @@
   --color-ink-faint: var(--ink-faint);
   --color-accent: var(--accent);
   --font-display: var(--font-display);
+  --font-title: var(--font-title);
   --font-body: var(--font-body);
+  --font-label: var(--font-label);
+  --text-step--1: var(--step--1);
+  --text-step-0: var(--step-0);
+  --text-step-1: var(--step-1);
+  --text-step-2: var(--step-2);
+  --text-step-3: var(--step-3);
 }
 
 :root,
 :root[data-theme="ink"] {
-  --paper: #efe6cf;
-  --paper-deep: #e3d7b8;
-  --ink: #241f1a;
-  --ink-soft: #4a423a;
-  --ink-faint: #8a7f70;
+  --paper: #efe6d2;
+  --paper-deep: #dfd0b1;
+  --ink: #2b211a;
+  --ink-soft: #4a3b2e;
+  --ink-faint: #6b5540;
   --accent: #7a2e1d;
-  --font-display: Georgia, "Times New Roman", serif;
-  --font-body: Georgia, "Times New Roman", serif;
+  --font-title: "IM Fell French Canon", "EB Garamond Variable", Georgia, serif;
+  --font-display: "IM Fell English SC", "EB Garamond Variable", Georgia, serif;
+  --font-body: "IM Fell English", "EB Garamond Variable", Georgia, serif;
+  --font-label: "IM Fell English", "EB Garamond Variable", Georgia, serif;
+  --stroke-thick: 2.1px;
+  --stroke-thin: 1.4px;
+  --stroke-hair: 0.8px;
 }
 
 :root[data-theme="graph"] {
-  --paper: #f6f7f3;
-  --paper-deep: #e9ece4;
-  --ink: #1c2530;
-  --ink-soft: #3b4756;
-  --ink-faint: #8b96a3;
+  --paper: #f6f3ea;
+  --paper-deep: #e8e4d8;
+  --ink: #1e2a3a;
+  --ink-soft: #3d4a5c;
+  --ink-faint: #5a6a80;
   --accent: #2b5fa8;
-  --font-display: ui-monospace, "SF Mono", Menlo, monospace;
-  --font-body: ui-sans-serif, system-ui, sans-serif;
+  --font-title: "B612", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "B612", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "B612", ui-sans-serif, system-ui, sans-serif;
+  --font-label: "B612 Mono", ui-monospace, monospace;
+  --stroke-thick: 1.9px;
+  --stroke-thin: 0.95px;
+  --stroke-hair: 0.95px;
 }
 
 :root[data-theme="fusion"] {
-  --paper: #f1ecdd;
-  --paper-deep: #e5dfc9;
-  --ink: #221e1b;
-  --ink-soft: #46403a;
-  --ink-faint: #8a8375;
+  --paper: #ece4d0;
+  --paper-deep: #ddd3ba;
+  --ink: #2a2420;
+  --ink-soft: #4a4038;
+  --ink-faint: #6a5a4a;
   --accent: #2b5fa8;
-  --font-display: Georgia, "Times New Roman", serif;
-  --font-body: ui-sans-serif, system-ui, sans-serif;
+  --font-title: "IM Fell French Canon", "EB Garamond Variable", Georgia, serif;
+  --font-display: "EB Garamond Variable", Georgia, serif;
+  --font-body: "EB Garamond Variable", Georgia, serif;
+  --font-label: "B612 Mono", ui-monospace, monospace;
+  --stroke-thick: 2px;
+  --stroke-thin: 1.2px;
+  --stroke-hair: 0.8px;
+}
+
+/* Type scale for placard captions (aesthetics.md, 3.4). */
+:root {
+  --step-0: clamp(17px, 12px + 1.1vw, 21px);
+  --step-1: calc(var(--step-0) * 1.25);
+  --step-2: calc(var(--step-0) * 1.9);
+  --step-3: calc(var(--step-0) * 3.2);
+  --step--1: calc(var(--step-0) * 0.78);
 }
 
 html,
@@ -60,15 +100,75 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
+  font-variant-numeric: oldstyle-nums proportional-nums;
 }
 
+/* The sheet: base colour first, the raster fades in when it is ready, laid
+   and chain lines and the toning ride on top under multiply. The laid pitches
+   are working values (aesthetics.md, 1.1). */
 .paper {
   background: var(--paper);
+  isolation: isolate;
+}
+.paper-raster {
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+}
+.paper-raster[data-ready] {
+  opacity: 1;
+}
+:root[data-theme="ink"] .paper::before,
+:root[data-theme="fusion"] .paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(60 40 10 / 0.05) 0 1px,
+      transparent 1px 96px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgb(60 40 10 / 0.03) 0 1px,
+      transparent 1px 4px
+    );
+  mix-blend-mode: multiply;
+}
+:root[data-theme="ink"] .paper::after,
+:root[data-theme="fusion"] .paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 90% at 50% 45%,
+      transparent 55%,
+      rgb(92 64 28 / 0.18) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgb(92 64 28 / 0.1),
+      transparent 8% 92%,
+      rgb(92 64 28 / 0.1)
+    );
+  mix-blend-mode: multiply;
 }
 
-/* Page turns: the scene crossfades, the placard fades out then in. */
+/* The placard: 34em measure, lifted clear of browser bars and notches. */
 .caption {
   view-transition-name: caption;
+  padding-bottom: calc(7svh + env(safe-area-inset-bottom, 0px));
+}
+.caption-block {
+  max-width: 34em;
+}
+
+/* The marginal note by the gear: fades in once the plate has settled. */
+.gear-note {
+  animation: 400ms ease-out 1500ms both fade-in;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -96,28 +196,34 @@ body {
   }
 }
 
-/* Ink: every stroke in the illustration reads the theme's ink. Widths are in
-   screen pixels (non-scaling strokes) so a zoomed viewBox keeps the pen. */
+/* Ink: every stroke in the illustration reads the theme's ink and pen widths.
+   Widths are screen pixels (non-scaling strokes) so a zoomed viewBox keeps
+   the pen; ink multiplies into the paper so the fibre shows through it. */
+.ink {
+  mix-blend-mode: multiply;
+}
 .ink path {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 2.2px;
+  stroke-width: var(--stroke-thick);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .ink path[data-stroke="soft"] {
   stroke: var(--ink-soft);
-  stroke-width: 1.6px;
+  stroke-width: var(--stroke-thin);
 }
 .ink path[data-stroke="faint"] {
   stroke: var(--ink-faint);
-  stroke-width: 1.2px;
+  stroke-width: var(--stroke-hair);
 }
 .ink path[data-stroke="accent"] {
   stroke: var(--accent);
 }
-.ink path[data-fill] {
-  fill: var(--paper-deep);
+.ink path[data-stroke="hatch"] {
+  stroke: var(--ink-soft);
+  stroke-width: var(--stroke-hair);
+  stroke-linecap: butt;
 }
 
 /* The drawing draws itself when a page opens. */
@@ -128,6 +234,10 @@ body {
     stroke-dashoffset: 1;
     animation: 900ms ease-out both draw-on;
   }
+  .ink path[data-stroke="hatch"] {
+    animation-delay: 500ms;
+    animation-duration: 600ms;
+  }
 }
 
 @keyframes draw-on {
@@ -136,22 +246,22 @@ body {
   }
 }
 
-/* Where the hand may take hold: a quiet ring, decoration only. */
+/* Where the hand may take hold: a quiet ring in faded ink, decoration only. */
 .grab-hint {
   fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.5px;
-  stroke-dasharray: 4 5;
-  opacity: 0.85;
+  stroke: var(--ink-faint);
+  stroke-width: 1px;
+  stroke-dasharray: 3 4;
+  opacity: 0.8;
 }
 @media (prefers-reduced-motion: no-preference) {
   .grab-hint {
-    animation: 2400ms ease-in-out infinite breathe;
+    animation: 4000ms ease-in-out infinite breathe;
   }
 }
 
 @keyframes breathe {
   50% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }

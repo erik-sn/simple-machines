@@ -92,19 +92,28 @@ export interface Keyframe {
   y: number;
 }
 
-// A demonstration: the unseen hand grabs one part and follows the keyframes.
+// A demonstration: the unseen hand grabs one part and follows the keyframes,
+// holds the last one for `rest` steps, then the scene resets and replays.
+// Infinity holds forever, which is how a still plate waits to be touched.
 export interface Script {
   partId: string;
   frames: readonly Keyframe[];
-  // Steps to hold the scene after the last frame before it resets and replays.
   rest: number;
+}
+
+// Where the unseen hand holds a still plate at rest.
+export interface Hold {
+  partId: string;
+  at: Vec;
 }
 
 export interface Camera {
   x: number;
   y: number;
-  // Visible height in metres; width follows the viewport's aspect.
+  // Visible height in metres; width follows the viewport's aspect, but the
+  // view widens (showing more height) until at least `width` metres fit.
   height: number;
+  width: number;
 }
 
 export interface SceneDefinition {
@@ -117,4 +126,5 @@ export interface SceneDefinition {
     variant: string | undefined,
   ) => Machine;
   script?: (values: SettingValues, variant: string | undefined) => Script;
+  hold?: (values: SettingValues, variant: string | undefined) => Hold;
 }

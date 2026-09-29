@@ -15,7 +15,7 @@ import type {
 // the fulcrum, load, and effort sit along the bar.
 
 const BAR_HALF_THICKNESS = 0.03;
-const BAR_DENSITY = 10;
+const BAR_DENSITY = 4;
 const ROPE_LENGTH = 0.5;
 const WEIGHT_HALF = 0.16;
 const TILT_LIMIT = 0.45;
@@ -64,7 +64,7 @@ export const LEVER_SETTINGS: readonly SettingSpec[] = [
     key: "load",
     label: "Load",
     min: 0.5,
-    max: 10,
+    max: 8,
     step: 0.5,
     defaultValue: 5,
     unit: "kg",
@@ -95,7 +95,7 @@ function formatNewtons(value: number): string {
 
 export const leverScene: SceneDefinition = {
   settings: LEVER_SETTINGS,
-  camera: { x: 0, y: -0.2, height: 4 },
+  camera: { x: 0, y: -0.2, height: 4, width: 4.6 },
   build(world, page, values, variant) {
     const length = values.length ?? 3;
     const loadMass = values.load ?? 5;
@@ -270,6 +270,14 @@ export const leverScene: SceneDefinition = {
       },
     };
     return machine;
+  },
+  hold(values, variant) {
+    const length = values.length ?? 3;
+    const layout = layoutFor(values, variant);
+    return {
+      partId: "bar",
+      at: { x: -length / 2 + layout.effort * length, y: 0 },
+    };
   },
   script(values, variant): Script {
     const length = values.length ?? 3;
