@@ -78,7 +78,7 @@ export function AboutPanel({ open, onClose }: Props) {
           </li>
         ))}
       </ol>
-      {progress !== null && progress !== "/" && (
+      {progress !== null && progress !== window.location.pathname && (
         <p className="font-body mt-4 text-sm">
           <Link
             to={progress}

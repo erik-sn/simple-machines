@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { useSetExtraSection } from "../book/extraSettings";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { renderShape } from "../ink/render";
 import type { Vec } from "../physics/types";
 import { Marginalia } from "../scenes/Marginalia";
@@ -13,6 +14,7 @@ import type { SettingSpec, SettingValues } from "../scenes/settings";
 import { useTheme } from "../theme/ThemeProvider";
 import {
   type Composition,
+  EMPTY_COMPOSITION,
   jointFor,
   linkRefusal,
   nextNodeId,
@@ -34,7 +36,7 @@ export const THEATRE_SETTINGS: readonly SettingSpec[] = [
     label: "Gravity",
     min: 1,
     max: 20,
-    step: 0.5,
+    step: 0.1,
     defaultValue: 9.8,
     unit: "m/s²",
   },
@@ -43,6 +45,8 @@ export const THEATRE_SETTINGS: readonly SettingSpec[] = [
 const CAMERA = { x: 0, y: 0.4, height: 6, width: 9 };
 const SNAP_RADIUS = 0.3;
 const PORT_RADIUS = 0.045;
+const HANDLE_RADIUS = 0.09;
+const MIN_MARK_PX = 10;
 const ROPE_HANG = 0.6;
 
 interface Props {
@@ -57,15 +61,33 @@ export function TheatreView({ settings }: Props) {
   const { theme } = useTheme();
   const gravity = settings.gravity ?? 9.8;
 
+  // The first free spot on the page, clear of the bench list and the placard.
+  function freeSpot(): Vec {
+    const spots: Vec[] = [];
+    for (const y of [1.6, -0.4]) {
+      for (const x of [-1.5, 1, 3.5, -3.5]) {
+        spots.push({ x, y });
+      }
+    }
+    for (const spot of spots) {
+      const taken = composition.nodes.some(
+        (n) => Math.hypot(n.x - spot.x, n.y - spot.y) < 1.6,
+      );
+      if (!taken) {
+        return spot;
+      }
+    }
+    return { x: 0, y: 1.6 };
+  }
+
   function add(kind: TheatreKind) {
     const id = nextNodeId(composition, kind);
-    const count = composition.nodes.length;
+    const spot = freeSpot();
     const node = {
       id,
       kind,
-      // Clear of the bench list on the left; the visitor drags it from here.
-      x: -1 + (count % 3) * 3,
-      y: 1.4 - Math.floor(count / 3) * 2.2,
+      x: spot.x,
+      y: spot.y,
       settings: {},
       // A weight waits, pinned, until something holds it.
       ...(kind === "weight" ? { fixed: true } : {}),
@@ -79,19 +101,51 @@ export function TheatreView({ settings }: Props) {
   }
   return (
     <>
-      <Bench
-        key={`${gravity}:${JSON.stringify(composition)}`}
-        composition={composition}
-        gravity={gravity}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onChange={update}
-      />
-      <nav
-        aria-label="Bench"
-        className="absolute top-1/2 left-6 -translate-y-1/2"
+      <ErrorBoundary
+        fallback={(reset) => (
+          <p
+            role="alert"
+            className="font-body text-accent text-step--1 absolute top-16 left-6 max-w-xs italic"
+          >
+            This bench could not be built.{" "}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => {
+                update(EMPTY_COMPOSITION);
+                reset();
+              }}
+            >
+              Start with an empty bench.
+            </button>
+          </p>
+        )}
       >
+        <Bench
+          key={`${gravity}:${JSON.stringify(composition)}`}
+          composition={composition}
+          gravity={gravity}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onChange={update}
+        />
+      </ErrorBoundary>
+      <nav aria-label="Bench" className="bench absolute">
         <ul className="bench-list">
+          {composition.nodes.length > 0 && (
+            <li className="pb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  update({ v: 1, nodes: [], links: [] });
+                  setSelectedId(null);
+                }}
+                className="font-body text-ink-faint hover:text-ink text-step--1 italic"
+              >
+                clear the bench
+              </button>
+            </li>
+          )}
           {THEATRE_KINDS.map((kind) => {
             const vignette = vignetteFor(kind, theme);
             return (
@@ -118,7 +172,7 @@ export function TheatreView({ settings }: Props) {
                         />
                       ))}
                       {vignette.parts.map((part) => (
-                        <g key={part.transform} transform={part.transform}>
+                        <g key={part.id} transform={part.transform}>
                           {part.paths.map((path) => (
                             <path
                               key={path.d}
@@ -138,20 +192,6 @@ export function TheatreView({ settings }: Props) {
               </li>
             );
           })}
-          {composition.nodes.length > 0 && (
-            <li className="pt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  update({ v: 1, nodes: [], links: [] });
-                  setSelectedId(null);
-                }}
-                className="font-body text-ink-faint hover:text-ink text-step--1 italic"
-              >
-                clear the bench
-              </button>
-            </li>
-          )}
         </ul>
       </nav>
       {error !== null && (
@@ -244,9 +284,13 @@ function Bench({
       return;
     }
     const pinnable = instance.node.kind === "weight";
+    // A bare machine has no load of its own and the bench sets gravity.
+    const specs = instance.definition.settings.filter(
+      (spec) => pinnable || (spec.key !== "gravity" && spec.key !== "load"),
+    );
     publishSection({
       title: PREFAB_LABELS[instance.node.kind],
-      specs: instance.definition.settings,
+      specs,
       values: instance.values,
       ...(pinnable
         ? {
@@ -299,6 +343,11 @@ function Bench({
   const pxPerMetre = Math.max(
     20,
     Math.round(size.width / viewBox.width / 10) * 10,
+  );
+  const portRadius = Math.max(PORT_RADIUS, MIN_MARK_PX / pxPerMetre);
+  const handleRadius = Math.max(
+    HANDLE_RADIUS,
+    (MIN_MARK_PX * 1.4) / pxPerMetre,
   );
 
   function toWorld(event: PointerEvent<SVGSVGElement>): Vec {
@@ -446,6 +495,17 @@ function Bench({
         }
         if (best !== null) {
           join(current.from, best);
+        } else {
+          const near = controller.allPorts().find((p) => {
+            if (p.node.id === current.from.node.id) {
+              return false;
+            }
+            const q = controller.portWorld(p);
+            return Math.hypot(q.x - point.x, q.y - point.y) < SNAP_RADIUS;
+          });
+          if (near !== undefined) {
+            setNote("Those two parts do not fit together.");
+          }
         }
         break;
       }
@@ -530,6 +590,17 @@ function Bench({
         onPointerCancel={onPointerUp}
       >
         <g transform="scale(1 -1)">
+          <g className="ink-ropes">
+            {controller.linkRopes.map((rope) => (
+              <path
+                key={rope.id}
+                ref={(element) => controller.attachRope(rope.id, element)}
+                d=""
+                data-stroke="soft"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
           {controller.instances.map((instance) => {
             const { node, machine } = instance;
             return (
@@ -627,7 +698,7 @@ function Bench({
                               data-port={port.id}
                               cx={port.at.x}
                               cy={port.at.y}
-                              r={PORT_RADIUS}
+                              r={portRadius}
                               vectorEffect="non-scaling-stroke"
                             >
                               <title>{`${PREFAB_LABELS[node.kind]}: ${port.id}`}</title>
@@ -657,7 +728,7 @@ function Bench({
                       data-port={port.id}
                       cx={node.x + port.at.x}
                       cy={node.y + port.at.y}
-                      r={PORT_RADIUS}
+                      r={portRadius}
                       vectorEffect="non-scaling-stroke"
                     >
                       <title>{`${PREFAB_LABELS[node.kind]}: ${port.id}`}</title>
@@ -672,7 +743,7 @@ function Bench({
                   data-node-handle={node.id}
                   cx={node.x}
                   cy={node.y}
-                  r={0.09}
+                  r={handleRadius}
                   vectorEffect="non-scaling-stroke"
                 >
                   <title>{`Move the ${PREFAB_LABELS[node.kind].toLowerCase()}`}</title>
@@ -680,17 +751,6 @@ function Bench({
               </g>
             );
           })}
-          <g className="ink-ropes">
-            {controller.linkRopes.map((rope) => (
-              <path
-                key={rope.id}
-                ref={(element) => controller.attachRope(rope.id, element)}
-                d=""
-                data-stroke="soft"
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-          </g>
           <path
             ref={linkLineRef}
             className="link-drag"

@@ -86,7 +86,7 @@ export const LEVER_SETTINGS: readonly SettingSpec[] = [
     label: "Gravity",
     min: 1,
     max: 20,
-    step: 0.5,
+    step: 0.1,
     defaultValue: 9.8,
     unit: "m/s²",
   },
@@ -120,6 +120,14 @@ export const leverScene: SceneDefinition = {
     bar.createFixture(new Box(length / 2, BAR_HALF_THICKNESS), {
       density: BAR_DENSITY,
       friction: 0.5,
+    });
+    // The bar's own weight sits on the pin, so it adds no torque of its own
+    // and the measured advantage answers only to the load and the hand.
+    const barMass = bar.getMass();
+    bar.setMassData({
+      mass: barMass,
+      center: new Vec2(xFulcrum, 0),
+      I: (barMass * length * length) / 12,
     });
     const pin = world.createJoint(
       new RevoluteJoint(
@@ -361,7 +369,7 @@ export const leverScene: SceneDefinition = {
           id: "load-hook",
           kind: "ropeAnchor",
           part: "bar",
-          at: { x: xLoad, y: -BAR_HALF_THICKNESS },
+          at: { x: xLoad, y: -BAR_HALF_THICKNESS - 0.08 },
           role: "load",
         },
       ],

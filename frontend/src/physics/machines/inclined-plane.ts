@@ -226,7 +226,7 @@ export const INCLINED_PLANE_SETTINGS: readonly SettingSpec[] = [
     label: "Gravity",
     min: 1,
     max: 20,
-    step: 0.5,
+    step: 0.1,
     defaultValue: 9.8,
     unit: "m/s²",
   },

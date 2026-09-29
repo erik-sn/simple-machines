@@ -92,7 +92,7 @@ const weightScene: SceneDefinition = {
           id: "rope-end",
           kind: "ropeEnd",
           part: "block",
-          at: { x: 0, y: WEIGHT_HALF + 0.05 },
+          at: { x: 0, y: WEIGHT_HALF + 0.16 },
           role: "load",
         },
         {

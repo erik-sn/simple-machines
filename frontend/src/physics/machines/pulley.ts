@@ -44,9 +44,9 @@ const BEAM_HEIGHT = 0.1;
 const SHADOW_BAND = 0.03;
 const FIXED_ROW_Y = 1;
 const CLEARANCE = 0.1;
-// Guide travel on the slack side: the load may sink this far (over n) below
-// where the hand holds it before its guide stops it, and the toggle rise the
-// same distance before the rope is drawn slack.
+// Guide travel on the slack side: the toggle may rise this far past where
+// the hand holds it, the load sinking this far over n, before the load's
+// guide stops it.
 const SLACK = 0.15;
 // Ground anchor for the free end when the hand pulls upward: a virtual point
 // well below the toggle, so the joint's second length grows with the pull.
@@ -250,14 +250,13 @@ function layoutFor(values: SettingValues, variant: string | undefined): Layout {
   };
 }
 
-// How far the demonstration pulls the free end: a long pull that keeps the
-// load short of its ceiling and the toggle clear of the caption.
+// How far the demonstration pulls the free end: half a metre for a single
+// sheave, 0.28 m per strand for a tackle, kept short of the load's ceiling
+// and of the caption.
 function demoPull(layout: Layout): number {
-  const perStrand = layout.variant === "tackle" ? 0.28 : 0.5 / layout.strands;
-  return Math.min(
-    layout.handleY + 0.55,
-    layout.strands * Math.min(layout.riseMax - 0.03, perStrand),
-  );
+  const wanted = layout.variant === "tackle" ? 0.28 * layout.strands : 0.5;
+  const ceiling = (layout.riseMax - 0.03) * layout.strands;
+  return Math.min(wanted, ceiling, layout.handleY + 0.55);
 }
 
 export const PULLEY_SETTINGS: readonly SettingSpec[] = [
@@ -292,7 +291,7 @@ export const PULLEY_SETTINGS: readonly SettingSpec[] = [
     label: "Gravity",
     min: 1,
     max: 20,
-    step: 0.5,
+    step: 0.1,
     defaultValue: 9.8,
     unit: "m/s²",
   },
@@ -550,6 +549,7 @@ export const pulleyScene: SceneDefinition = {
       linearDamping: 0.3,
     });
     const shell = layout.blockShell;
+    // A bare rope end gets a small box around its stem and eye.
     const shellBox =
       shell === null
         ? { hx: 0.05, hy: 0.08, cy: -0.08 }
@@ -699,7 +699,7 @@ export const pulleyScene: SceneDefinition = {
     }
     const frameHookY = hookBottom(layout.beamBottom) - layout.fixedY;
 
-    const frameEye: Part = { id: "frame", body: frame, shapes: frameShapes };
+    const framePart: Part = { id: "frame", body: frame, shapes: frameShapes };
     const blockPart: Part = { id: "block", body: block, shapes: blockShapes };
     const handlePart: Part = {
       id: "handle",
@@ -807,7 +807,7 @@ export const pulleyScene: SceneDefinition = {
 
     const machine: Machine = {
       parts: [
-        frameEye,
+        framePart,
         blockPart,
         handlePart,
         ...sheaveParts.map((s) => s.part),

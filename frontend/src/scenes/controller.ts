@@ -79,6 +79,7 @@ export class SceneController {
   private scriptActive: boolean;
   private grabbedOnce = false;
   private readerHolding = false;
+  private resumeAt: number | null = null;
   private started = false;
 
   constructor(
@@ -170,6 +171,7 @@ export class SceneController {
       this.scriptActive = false;
       this.hand.release();
     }
+    this.resumeAt = null;
     const part = this.hand.grab(point);
     if (part === null) {
       return false;
@@ -190,9 +192,22 @@ export class SceneController {
   release(): void {
     this.hand.release();
     this.readerHolding = false;
+    // The unseen hand takes the demonstration back after a pause.
+    if (this.script !== null && !this.scriptActive) {
+      this.resumeAt = this.loop.step + 150;
+    }
   }
 
   private beforeStep(step: number): void {
+    if (
+      this.resumeAt !== null &&
+      step >= this.resumeAt &&
+      !this.readerHolding
+    ) {
+      this.resumeAt = null;
+      this.reset();
+      this.scriptActive = true;
+    }
     if (this.scriptActive && this.script !== null) {
       this.runScript(this.script);
     }

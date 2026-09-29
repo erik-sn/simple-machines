@@ -38,11 +38,21 @@ export function partKey(nodeId: string, partId: string): string {
   return `${nodeId}/${partId}`;
 }
 
+// Saved settings are clamped to their specs: a link may carry any number.
 export function nodeValues(
   node: MachineNode,
   definition: SceneDefinition,
 ): SettingValues {
-  return { ...defaultValues(definition.settings), ...node.settings };
+  const values: Record<string, number> = {
+    ...defaultValues(definition.settings),
+  };
+  for (const spec of definition.settings) {
+    const saved = node.settings[spec.key];
+    if (saved !== undefined && Number.isFinite(saved)) {
+      values[spec.key] = Math.min(spec.max, Math.max(spec.min, saved));
+    }
+  }
+  return values;
 }
 
 // Builds every machine on the bench at its place, joins them as the links

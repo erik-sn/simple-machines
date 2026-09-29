@@ -6,7 +6,9 @@ const KEY = "progress";
 // Remembers the last page opened so the contents can offer to continue.
 export function useRecordProgress(path: string): void {
   useEffect(() => {
-    writeStorage(KEY, path);
+    if (path !== "/") {
+      writeStorage(KEY, path);
+    }
   }, [path]);
 }
 

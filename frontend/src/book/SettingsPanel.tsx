@@ -40,6 +40,20 @@ export function SettingsPanel({
     }
   }, [open]);
 
+  // A non-modal panel gets no native cancel: Escape closes it from anywhere.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
   return (
     <dialog
       ref={dialogRef}
@@ -49,7 +63,7 @@ export function SettingsPanel({
           onClose();
         }
       }}
-      className="bg-paper text-ink absolute top-14 right-4 m-0 w-72 border border-ink-faint p-5 shadow-none"
+      className="bg-paper text-ink absolute top-14 right-4 left-auto m-0 w-72 border border-ink-faint p-5 shadow-none"
     >
       <div className="flex items-baseline justify-between">
         <h2

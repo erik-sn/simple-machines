@@ -234,9 +234,12 @@ export async function decodeComposition(hash: string): Promise<Composition> {
   if (!text.startsWith("c=")) {
     throw new Error("This address does not describe a bench.");
   }
-  const parsed: unknown = JSON.parse(
-    await gunzip(fromBase64Url(text.slice(2))),
-  );
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await gunzip(fromBase64Url(text.slice(2))));
+  } catch {
+    throw new Error("This address does not describe a bench.");
+  }
   return validate(parsed);
 }
 

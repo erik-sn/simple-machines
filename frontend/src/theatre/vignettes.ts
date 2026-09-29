@@ -14,7 +14,7 @@ export interface Vignette {
   kind: TheatreKind;
   viewBox: string;
   statics: VignettePath[];
-  parts: { transform: string; paths: VignettePath[] }[];
+  parts: { id: string; transform: string; paths: VignettePath[] }[];
 }
 
 export const VIGNETTE_WIDTH = 84;
@@ -53,6 +53,7 @@ export function vignetteFor(kind: TheatreKind, theme: ThemeId): Vignette {
     const p = part.body.getPosition();
     const degrees = (part.body.getAngle() * 180) / Math.PI;
     return {
+      id: part.id,
       transform: `translate(${p.x} ${p.y}) rotate(${degrees})`,
       paths: part.shapes.flatMap((shape, index) =>
         renderShape(theme, shape, `${part.id}:${index}`, pxPerMetre).map(

@@ -6,6 +6,26 @@ import {
   encodeComposition,
 } from "./composition";
 
+const SESSION_KEY = "simple-machines:bench";
+
+// The last hash this session built, so turning the Theatre's pages (whose
+// URLs carry no hash) does not lose the bench.
+function rememberedHash(): string {
+  try {
+    return sessionStorage.getItem(SESSION_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function rememberHash(hash: string): void {
+  try {
+    sessionStorage.setItem(SESSION_KEY, hash);
+  } catch {
+    // Storage unavailable: the bench lives in the URL alone.
+  }
+}
+
 interface State {
   composition: Composition;
   ready: boolean;
@@ -28,26 +48,40 @@ export function useComposition(): {
 
   useEffect(() => {
     let cancelled = false;
-    decodeComposition(window.location.hash).then(
-      (composition) => {
-        if (!cancelled) {
-          setState({ composition, ready: true, error: null });
-        }
-      },
-      (error: unknown) => {
-        if (!cancelled) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          setState({
-            composition: EMPTY_COMPOSITION,
-            ready: true,
-            error: message,
-          });
-        }
-      },
-    );
+    function load() {
+      const hash =
+        window.location.hash === "" ? rememberedHash() : window.location.hash;
+      if (hash !== "" && window.location.hash === "") {
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${hash}`,
+        );
+      }
+      decodeComposition(hash).then(
+        (composition) => {
+          if (!cancelled) {
+            setState({ composition, ready: true, error: null });
+          }
+        },
+        (error: unknown) => {
+          if (!cancelled) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            setState({
+              composition: EMPTY_COMPOSITION,
+              ready: true,
+              error: message,
+            });
+          }
+        },
+      );
+    }
+    load();
+    window.addEventListener("hashchange", load);
     return () => {
       cancelled = true;
+      window.removeEventListener("hashchange", load);
     };
   }, []);
 
@@ -55,8 +89,13 @@ export function useComposition(): {
     setState({ composition: next, ready: true, error: null });
     encodeComposition(next).then(
       (hash) => {
-        const url = `${window.location.pathname}${hash === "" ? "" : `#${hash}`}`;
-        window.history.replaceState(null, "", url);
+        const full = hash === "" ? "" : `#${hash}`;
+        rememberHash(full);
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${full}`,
+        );
       },
       (error: unknown) => {
         throw error;

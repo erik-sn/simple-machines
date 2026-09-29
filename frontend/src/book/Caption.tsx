@@ -33,8 +33,8 @@ export function Caption({
             tabIndex={-1}
             className={
               isTitlePage
-                ? "font-title text-ink text-step-3 uppercase leading-none tracking-wide"
-                : "font-display text-ink-soft text-step--1 lowercase tracking-widest"
+                ? "font-title text-ink text-step-3 uppercase leading-none tracking-wide outline-none"
+                : "font-display text-ink-soft text-step--1 lowercase tracking-widest outline-none"
             }
           >
             {chapter.numeral !== null && (

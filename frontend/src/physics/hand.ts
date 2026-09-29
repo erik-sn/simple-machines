@@ -56,20 +56,21 @@ export class Hand {
     return part;
   }
 
-  // Takes hold of a named part at a point, for scripted demonstrations.
+  // Takes hold of a named part at a point, for the unseen hand: firmer than
+  // the reader's, so a still plate does not sag under its load.
   holdPart(part: Part, point: Vec): void {
-    this.hold(part, point);
+    this.hold(part, point, true);
   }
 
-  private hold(part: Part, point: Vec): void {
+  private hold(part: Part, point: Vec, firm = false): void {
     this.release();
     const target = new Vec2(point.x, point.y);
     const joint = this.world.createJoint(
       new MouseJoint(
         {
-          maxForce: 1000 * part.body.getMass(),
-          frequencyHz: 5,
-          dampingRatio: 0.7,
+          maxForce: (firm ? 8000 : 1000) * part.body.getMass(),
+          frequencyHz: firm ? 30 : 5,
+          dampingRatio: firm ? 1 : 0.7,
         },
         this.page,
         part.body,

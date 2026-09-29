@@ -463,7 +463,21 @@ dialog::backdrop {
   stroke-dasharray: 4 4;
 }
 
-/* The bench list: each machine drawn small, its name beneath. */
+/* The bench list: each machine drawn small, its name beneath. Along the
+   left on wide pages, along the top on phones. */
+.bench {
+  top: 50%;
+  left: 1.5rem;
+  transform: translateY(-50%);
+}
+@media (max-width: 640px) {
+  .bench {
+    top: 10svh;
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+  }
+}
 .bench-list {
   display: flex;
   flex-direction: column;
