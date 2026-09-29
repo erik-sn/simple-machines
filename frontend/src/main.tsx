@@ -1,20 +1,13 @@
-// template-managed (bootstrap): do not edit. This is the ONLY file that mounts
-// the app; App stays an ordinary component so other repos can import it
-// (docs/template.md, "sharing code"). Delete this line to take ownership.
-import { setupListeners } from "@reduxjs/toolkit/query";
+// Taken over from the template: the store listeners are gone (no store). This
+// is the ONLY file that mounts the app; App stays an ordinary component.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import projectFacts from "../../project.json";
 import { App } from "./App";
-import { store } from "./store/store";
 import "./index.css";
 
 document.title = projectFacts.name;
-
-// Forward the browser's online and visibility events to the store for
-// refetchOnReconnect (and refetchOnFocus where a hook enables it).
-setupListeners(store.dispatch);
 
 // A deploy replaces the hashed chunks; a tab opened before it fails to import
 // a screen it has not loaded yet. Reload once to pick up the new index.html.

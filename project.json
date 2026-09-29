@@ -9,5 +9,28 @@
     "frontend": true,
     "rust": false
   },
-  "template_takeovers": []
+  "template_takeovers": [
+    "frontend/openapi-config.js",
+    "frontend/src/auth/logout.ts",
+    "frontend/src/auth/RequireAuth.test.tsx",
+    "frontend/src/auth/RequireAuth.tsx",
+    "frontend/src/auth/tokens.ts",
+    "frontend/src/components/ErrorBoundary.test.tsx",
+    "frontend/src/components/RouteFocus.test.tsx",
+    "frontend/src/flags/FeatureGate.test.tsx",
+    "frontend/src/flags/FeatureGate.tsx",
+    "frontend/src/flags/useFlag.ts",
+    "frontend/src/i18n/format.test.ts",
+    "frontend/src/i18n/format.ts",
+    "frontend/src/i18n/index.ts",
+    "frontend/src/store/authSlice.ts",
+    "frontend/src/store/baseApi.test.ts",
+    "frontend/src/store/baseApi.ts",
+    "frontend/src/store/errors.test.ts",
+    "frontend/src/store/errors.ts",
+    "frontend/src/store/store.ts",
+    "frontend/src/test/renderWithProviders.tsx",
+    "frontend/src/test/server.ts",
+    "frontend/src/test/setup.ts"
+  ]
 }

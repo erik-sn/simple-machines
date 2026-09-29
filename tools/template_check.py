@@ -1,4 +1,3 @@
-# template-managed (bootstrap): do not edit. Delete this line to take ownership.
 """The ownership gate (just template-check).
 
 Verifies template-owned files still match the template version this project
@@ -92,8 +91,11 @@ def compare(pristine_root: Path, takeovers: set[str]) -> tuple[list[str], list[s
         pristine = pristine_root / rel
         if not local.exists():
             # Absent on both sides: excluded by a stack toggle (the Rust files
-            # in a non-Rust project). Absent locally only: deleted.
-            if pristine.exists():
+            # in a non-Rust project). Absent locally only: deleted, which is a
+            # takeover when project.json lists the path and divergence otherwise.
+            if rel in takeovers:
+                taken_over.append(rel)
+            elif pristine.exists():
                 diverged.append(f"{rel} (deleted locally)")
             continue
         marker_dropped = local.suffix != ".json" and not has_marker(local) and has_marker(pristine)

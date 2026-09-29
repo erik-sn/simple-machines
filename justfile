@@ -5,3 +5,7 @@
 set allow-duplicate-recipes := true
 
 import 'template.just'
+
+# No unit tests in this project (PROJECT.md): the Playwright suite is the test gate.
+test:
+    @echo "test: no unit tests in this project (PROJECT.md); run just e2e"
