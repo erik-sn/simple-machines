@@ -22,9 +22,9 @@ function fibreFilter(id: string, seed: number, amplitude: number): string {
       <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="${seed + 3}" result="mottleRaw"/>
       <feColorMatrix in="mottleRaw" type="saturate" values="0" result="mottle"/>
       <feComponentTransfer in="mottle" result="mottleLight">
-        <feFuncR type="linear" slope="0.16" intercept="0.86"/>
-        <feFuncG type="linear" slope="0.16" intercept="0.85"/>
-        <feFuncB type="linear" slope="0.16" intercept="0.82"/>
+        <feFuncR type="linear" slope="0.09" intercept="0.92"/>
+        <feFuncG type="linear" slope="0.09" intercept="0.91"/>
+        <feFuncB type="linear" slope="0.09" intercept="0.89"/>
         <feFuncA type="table" tableValues="1 1"/>
       </feComponentTransfer>
       <feBlend in="fibrePaper" in2="mottleLight" mode="multiply"/>

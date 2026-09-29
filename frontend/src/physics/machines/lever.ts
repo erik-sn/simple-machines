@@ -3,6 +3,7 @@ import type { SettingSpec, SettingValues } from "../../scenes/settings";
 import { ForceSampler } from "../sampler";
 import type {
   Machine,
+  MachineModule,
   Part,
   SceneDefinition,
   Script,
@@ -96,20 +97,24 @@ function formatNewtons(value: number): string {
 export const leverScene: SceneDefinition = {
   settings: LEVER_SETTINGS,
   camera: { x: 0, y: -0.2, height: 4, width: 4.6 },
-  build(world, page, values, variant) {
+  build(world, page, values, variant, context) {
     const length = values.length ?? 3;
     const loadMass = values.load ?? 5;
     const gravity = values.gravity ?? 9.8;
     const pinFriction = values.pinFriction ?? 0;
     const layout = layoutFor(values, variant);
+    const { origin } = context;
+    const at = (x: number, y: number) => new Vec2(origin.x + x, origin.y + y);
     const xAt = (fraction: number) => -length / 2 + fraction * length;
     const xFulcrum = xAt(layout.fulcrum);
     const xLoad = xAt(layout.load);
     const xEffort = xAt(layout.effort);
 
-    world.setGravity(new Vec2(0, -gravity));
+    if (context.standalone) {
+      world.setGravity(new Vec2(0, -gravity));
+    }
 
-    const bar = world.createBody({ type: "dynamic", position: new Vec2(0, 0) });
+    const bar = world.createBody({ type: "dynamic", position: at(0, 0) });
     bar.createFixture(new Box(length / 2, BAR_HALF_THICKNESS), {
       density: BAR_DENSITY,
       friction: 0.5,
@@ -126,33 +131,38 @@ export const leverScene: SceneDefinition = {
         },
         page,
         bar,
-        new Vec2(xFulcrum, 0),
+        at(xFulcrum, 0),
       ),
     );
     if (pin === null) {
       throw new Error("The world refused the lever's pin");
     }
 
+    // The chapter hangs its own weight; the Theatre leaves the load end free.
     const weightY = -BAR_HALF_THICKNESS - ROPE_LENGTH - WEIGHT_HALF;
-    const weight = world.createBody({
-      type: "dynamic",
-      position: new Vec2(xLoad, weightY),
-      linearDamping: 0.5,
-      angularDamping: 2,
-    });
-    weight.createFixture(new Box(WEIGHT_HALF, WEIGHT_HALF), {
-      density: loadMass / (4 * WEIGHT_HALF * WEIGHT_HALF),
-      friction: 0.5,
-    });
-    world.createJoint(
-      new RopeJoint({
-        bodyA: bar,
-        bodyB: weight,
-        localAnchorA: new Vec2(xLoad, -BAR_HALF_THICKNESS),
-        localAnchorB: new Vec2(0, WEIGHT_HALF),
-        maxLength: ROPE_LENGTH,
-      }),
-    );
+    const weight = context.standalone
+      ? world.createBody({
+          type: "dynamic",
+          position: at(xLoad, weightY),
+          linearDamping: 0.5,
+          angularDamping: 2,
+        })
+      : null;
+    if (weight !== null) {
+      weight.createFixture(new Box(WEIGHT_HALF, WEIGHT_HALF), {
+        density: loadMass / (4 * WEIGHT_HALF * WEIGHT_HALF),
+        friction: 0.5,
+      });
+      world.createJoint(
+        new RopeJoint({
+          bodyA: bar,
+          bodyB: weight,
+          localAnchorA: new Vec2(xLoad, -BAR_HALF_THICKNESS),
+          localAnchorB: new Vec2(0, WEIGHT_HALF),
+          maxLength: ROPE_LENGTH,
+        }),
+      );
+    }
 
     const barPart: Part = {
       id: "bar",
@@ -174,47 +184,50 @@ export const leverScene: SceneDefinition = {
       ],
       grab: { hintAt: { x: xEffort, y: 0 } },
     };
-    const weightPart: Part = {
-      id: "weight",
-      body: weight,
-      shapes: [
-        {
-          kind: "polygon",
-          points: [
-            { x: -WEIGHT_HALF, y: -WEIGHT_HALF },
-            { x: WEIGHT_HALF, y: -WEIGHT_HALF },
-            { x: WEIGHT_HALF, y: WEIGHT_HALF },
-            { x: -WEIGHT_HALF, y: WEIGHT_HALF },
-          ],
-          closed: true,
-          fill: true,
-        },
-        // A ring on top for the rope.
-        {
-          kind: "arc",
-          center: { x: 0, y: WEIGHT_HALF },
-          radius: 0.05,
-          start: 0,
-          end: Math.PI,
-          stroke: "soft",
-        },
-      ],
-    };
+    const weightPart: Part | null =
+      weight === null
+        ? null
+        : {
+            id: "weight",
+            body: weight,
+            shapes: [
+              {
+                kind: "polygon",
+                points: [
+                  { x: -WEIGHT_HALF, y: -WEIGHT_HALF },
+                  { x: WEIGHT_HALF, y: -WEIGHT_HALF },
+                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
+                  { x: -WEIGHT_HALF, y: WEIGHT_HALF },
+                ],
+                closed: true,
+                fill: true,
+              },
+              // A ring on top for the rope.
+              {
+                kind: "arc",
+                center: { x: 0, y: WEIGHT_HALF },
+                radius: 0.05,
+                start: 0,
+                end: Math.PI,
+                stroke: "soft",
+              },
+            ],
+          };
 
     const fulcrumStand: Shape = {
       kind: "polygon",
       points: [
-        { x: xFulcrum - 0.22, y: -0.5 },
-        { x: xFulcrum + 0.22, y: -0.5 },
-        { x: xFulcrum, y: -0.04 },
+        { x: origin.x + xFulcrum - 0.22, y: origin.y - 0.5 },
+        { x: origin.x + xFulcrum + 0.22, y: origin.y - 0.5 },
+        { x: origin.x + xFulcrum, y: origin.y - 0.04 },
       ],
       closed: true,
       fill: true,
     };
     const baseLine: Shape = {
       kind: "segment",
-      from: { x: xFulcrum - 0.35, y: -0.5 },
-      to: { x: xFulcrum + 0.35, y: -0.5 },
+      from: { x: origin.x + xFulcrum - 0.35, y: origin.y - 0.5 },
+      to: { x: origin.x + xFulcrum + 0.35, y: origin.y - 0.5 },
       stroke: "soft",
     };
 
@@ -226,14 +239,43 @@ export const leverScene: SceneDefinition = {
       return { x: p.x, y: p.y };
     };
     const ropeTo = (): Vec => {
+      if (weight === null) {
+        return ropeFrom();
+      }
       const p = weight.getWorldPoint(new Vec2(0, WEIGHT_HALF + 0.05));
       return { x: p.x, y: p.y };
     };
 
     const machine: Machine = {
-      parts: [barPart, weightPart],
-      ropes: [{ id: "rope", strands: () => [[ropeFrom(), ropeTo()]] }],
+      parts: weightPart === null ? [barPart] : [barPart, weightPart],
+      ropes:
+        weight === null
+          ? []
+          : [{ id: "rope", strands: () => [[ropeFrom(), ropeTo()]] }],
       statics: [fulcrumStand, baseLine],
+      ports: [
+        {
+          id: "load-end",
+          kind: "pin",
+          part: "bar",
+          at: { x: xLoad, y: 0 },
+          role: "load",
+        },
+        {
+          id: "effort-end",
+          kind: "pin",
+          part: "bar",
+          at: { x: xEffort, y: 0 },
+          role: "effort",
+        },
+        {
+          id: "load-hook",
+          kind: "ropeAnchor",
+          part: "bar",
+          at: { x: xLoad, y: -BAR_HALF_THICKNESS },
+          role: "load",
+        },
+      ],
       step(context) {
         if (context.handPart === barPart) {
           // Effort is the hand's force across the bar, the part that turns it.
@@ -251,9 +293,9 @@ export const leverScene: SceneDefinition = {
         const loadArm = Math.abs(xFulcrum - xLoad);
         const effortArm = Math.abs(xEffort - xFulcrum);
         const ideal = effortArm / loadArm;
-        const loadForce = weight.getMass() * gravity;
+        const loadForce = (weight?.getMass() ?? 0) * gravity;
         const settled =
-          weight.getLinearVelocity().length() < 0.08 &&
+          (weight?.getLinearVelocity().length() ?? 0) < 0.08 &&
           Math.abs(bar.getAngularVelocity()) < 0.08;
         const readouts = [
           { label: "Load", value: formatNewtons(loadForce) },
@@ -298,3 +340,5 @@ export const leverScene: SceneDefinition = {
     };
   },
 };
+
+export const machine: MachineModule = { kind: "lever", scene: leverScene };

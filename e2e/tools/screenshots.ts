@@ -1,8 +1,9 @@
 // Captures every page of the book in every theme and two viewports, for
 // review. Usage, from e2e/:
 //   node tools/screenshots.ts <outDir> [baseURL]
-// Without a baseURL it starts Vite from ../frontend on port 5190 and stops it
-// when done. Not a test: waits are timed, and nothing is asserted.
+// Without a baseURL it starts Vite from ../frontend on port 5190 (or
+// SHOTS_PORT) and stops it when done. Not a test: waits are timed, and
+// nothing is asserted.
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -15,7 +16,7 @@ const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "phone", width: 390, height: 844 },
 ] as const;
-const PORT = 5190;
+const PORT = Number(process.env.SHOTS_PORT ?? "5190");
 
 async function waitForServer(url: string): Promise<void> {
   const deadline = Date.now() + 60_000;

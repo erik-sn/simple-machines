@@ -109,6 +109,7 @@ export class SceneController {
       page,
       this.values,
       this.variant,
+      { standalone: true, origin: { x: 0, y: 0 } },
     );
     this.hand = new Hand(this.world, page, this.machine.parts);
   }

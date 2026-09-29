@@ -1,4 +1,5 @@
 import type { Body, World } from "planck";
+import type { MachineKind } from "../book/chapters";
 import type { SettingSpec, SettingValues } from "../scenes/settings";
 
 // World units are metres, y up, gravity down; a "fixed" part is a static body
@@ -76,14 +77,43 @@ export interface StepContext {
   handPart: Part | null;
 }
 
+// Where a machine can be joined to another in the Theatre
+// (docs/research/physics.md, "Port compatibility"). `at` is in the part's
+// local frame.
+export type PortKind =
+  | "pin"
+  | "ropeEnd"
+  | "ropeAnchor"
+  | "face"
+  | "handle"
+  | "shaft";
+
+export interface Port {
+  id: string;
+  kind: PortKind;
+  part: string;
+  at: Vec;
+  role: "effort" | "load" | "either";
+}
+
 export interface Machine {
   parts: readonly Part[];
   ropes: readonly Rope[];
   // Ink that never moves, in world coordinates.
   statics: readonly Shape[];
+  ports: readonly Port[];
   // Called before every physics step.
   step: (context: StepContext) => void;
   readouts: () => readonly Readout[];
+}
+
+export interface BuildContext {
+  // A chapter shows the machine with its own load and demonstration; the
+  // Theatre builds it bare, with ports for whatever the visitor attaches.
+  standalone: boolean;
+  // Every world coordinate the builder creates is offset by this point, so
+  // one builder serves both the chapter (origin 0,0) and the Theatre.
+  origin: Vec;
 }
 
 export interface Keyframe {
@@ -116,6 +146,12 @@ export interface Camera {
   width: number;
 }
 
+// What each file in physics/machines exports; the registry collects them.
+export interface MachineModule {
+  kind: MachineKind;
+  scene: SceneDefinition;
+}
+
 export interface SceneDefinition {
   settings: readonly SettingSpec[];
   camera: Camera;
@@ -124,6 +160,7 @@ export interface SceneDefinition {
     page: Body,
     values: SettingValues,
     variant: string | undefined,
+    context: BuildContext,
   ) => Machine;
   script?: (values: SettingValues, variant: string | undefined) => Script;
   hold?: (values: SettingValues, variant: string | undefined) => Hold;
