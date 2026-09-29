@@ -15,6 +15,9 @@ test("turning the pages from the title page into the first chapter", async ({
 
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL("/introduction/3");
+  await expect(
+    page.getByRole("heading", { name: "How the list was made" }),
+  ).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL("/lever");
   await expect(page.getByRole("heading", { name: /The Lever/ })).toBeVisible();

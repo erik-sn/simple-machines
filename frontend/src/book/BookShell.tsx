@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { readStorage, writeStorage } from "../lib/storage";
+import { sceneFor } from "../scenes/registry";
 import { Scene } from "../scenes/Scene";
-import {
-  defaultValues,
-  SCENE_SETTINGS,
-  type SettingValues,
-} from "../scenes/settings";
+import { defaultValues, type SettingValues } from "../scenes/settings";
 import { Paper } from "../theme/Paper";
 import { AboutPanel } from "./AboutPanel";
 import { Caption } from "./Caption";
@@ -35,7 +32,7 @@ export function BookShell({ chapter, position }: Props) {
   if (stage === undefined) {
     throw new Error(`${chapter.slug} has no stage ${position.stageIndex + 1}`);
   }
-  const specs = SCENE_SETTINGS[stage.scene.kind];
+  const specs = sceneFor(stage.scene.kind)?.settings ?? [];
   const [values, setValues] = useState<SettingValues>(() =>
     defaultValues(specs),
   );
@@ -54,7 +51,7 @@ export function BookShell({ chapter, position }: Props) {
   const next = nextPosition(position);
   const previousPath = previous === null ? null : positionPath(previous);
   const nextPath = next === null ? null : positionPath(next);
-  useKeyboardPaging(previousPath, nextPath);
+  useKeyboardPaging();
   useRecordProgress(positionPath(position));
 
   function openSettings() {

@@ -95,3 +95,63 @@ body {
     opacity: 0;
   }
 }
+
+/* Ink: every stroke in the illustration reads the theme's ink. Widths are in
+   screen pixels (non-scaling strokes) so a zoomed viewBox keeps the pen. */
+.ink path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink path[data-stroke="soft"] {
+  stroke: var(--ink-soft);
+  stroke-width: 1.6px;
+}
+.ink path[data-stroke="faint"] {
+  stroke: var(--ink-faint);
+  stroke-width: 1.2px;
+}
+.ink path[data-stroke="accent"] {
+  stroke: var(--accent);
+}
+.ink path[data-fill] {
+  fill: var(--paper-deep);
+}
+
+/* The drawing draws itself when a page opens. */
+@media (prefers-reduced-motion: no-preference) {
+  .ink-static path,
+  .ink-dynamic path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: 900ms ease-out both draw-on;
+  }
+}
+
+@keyframes draw-on {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Where the hand may take hold: a quiet ring, decoration only. */
+.grab-hint {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 5;
+  opacity: 0.85;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .grab-hint {
+    animation: 2400ms ease-in-out infinite breathe;
+  }
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}

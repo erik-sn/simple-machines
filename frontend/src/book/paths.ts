@@ -57,3 +57,30 @@ export function previousPosition(position: BookPosition): BookPosition | null {
     stageIndex: previous.stages.length - 1,
   };
 }
+
+// The inverse of stagePath: null for a URL that is not a page of the book.
+export function positionFromPath(pathname: string): BookPosition | null {
+  const segments = pathname.split("/").filter((s) => s !== "");
+  if (segments.length === 0) {
+    const chapterIndex = findChapterIndex("introduction");
+    return chapterIndex < 0 ? null : { chapterIndex, stageIndex: 0 };
+  }
+  const [slug, stage] = segments;
+  if (slug === undefined || segments.length > 2) {
+    return null;
+  }
+  const chapterIndex = findChapterIndex(slug);
+  const chapter = CHAPTERS[chapterIndex];
+  if (chapter === undefined) {
+    return null;
+  }
+  const stageIndex = stage === undefined ? 0 : Number(stage) - 1;
+  if (
+    !Number.isInteger(stageIndex) ||
+    stageIndex < 0 ||
+    stageIndex >= chapter.stages.length
+  ) {
+    return null;
+  }
+  return { chapterIndex, stageIndex };
+}
