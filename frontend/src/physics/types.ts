@@ -114,6 +114,9 @@ export interface BuildContext {
   // Every world coordinate the builder creates is offset by this point, so
   // one builder serves both the chapter (origin 0,0) and the Theatre.
   origin: Vec;
+  // The Theatre pins a free body (a weight) to the page until it is attached
+  // to something; machines have fixed frames regardless.
+  pinned?: boolean;
 }
 
 export interface Keyframe {

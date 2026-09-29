@@ -1,4 +1,5 @@
 import type { SceneRef, StageMode } from "../book/chapters";
+import { TheatreView } from "../theatre/TheatreView";
 import { sceneFor } from "./registry";
 import { SceneView } from "./SceneView";
 import type { SettingValues } from "./settings";
@@ -13,6 +14,9 @@ interface Props {
 // the machine, its settings, or the mode change, so a scene is always built
 // fresh from data (a reset is a rebuild, never an in-place undo).
 export function Scene({ scene, mode, settings }: Props) {
+  if (scene.kind === "theatre") {
+    return <TheatreView settings={settings} />;
+  }
   const definition = sceneFor(scene.kind);
   if (definition === undefined) {
     return (

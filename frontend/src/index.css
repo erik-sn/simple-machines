@@ -265,3 +265,32 @@ body {
     opacity: 0.4;
   }
 }
+
+/* The Theatre: ports the visitor may join, handles that move a machine, and
+   the line drawn while joining. */
+.port {
+  fill: var(--paper);
+  stroke: var(--ink-soft);
+  stroke-width: 1.2px;
+  cursor: crosshair;
+}
+.port-candidate {
+  stroke: var(--accent);
+  stroke-width: 2px;
+}
+.node-handle {
+  fill: var(--paper);
+  stroke: var(--ink-faint);
+  stroke-width: 1px;
+  stroke-dasharray: 2 3;
+  cursor: move;
+}
+.node-selected {
+  stroke: var(--ink);
+}
+.link-drag {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2px;
+  stroke-dasharray: 4 4;
+}

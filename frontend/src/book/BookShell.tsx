@@ -3,11 +3,13 @@ import { readStorage, writeStorage } from "../lib/storage";
 import { sceneFor } from "../scenes/registry";
 import { Scene } from "../scenes/Scene";
 import { defaultValues, type SettingValues } from "../scenes/settings";
+import { THEATRE_SETTINGS } from "../theatre/TheatreView";
 import { Paper } from "../theme/Paper";
 import { AboutPanel } from "./AboutPanel";
 import { Caption } from "./Caption";
 import { Chrome } from "./Chrome";
 import type { Chapter } from "./chapters";
+import { ExtraSettingsProvider } from "./extraSettings";
 import { NavArrows } from "./NavArrows";
 import {
   type BookPosition,
@@ -32,7 +34,10 @@ export function BookShell({ chapter, position }: Props) {
   if (stage === undefined) {
     throw new Error(`${chapter.slug} has no stage ${position.stageIndex + 1}`);
   }
-  const specs = sceneFor(stage.scene.kind)?.settings ?? [];
+  const specs =
+    stage.scene.kind === "theatre"
+      ? THEATRE_SETTINGS
+      : (sceneFor(stage.scene.kind)?.settings ?? []);
   const [values, setValues] = useState<SettingValues>(() =>
     defaultValues(specs),
   );
@@ -63,31 +68,33 @@ export function BookShell({ chapter, position }: Props) {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <Paper />
-      <Scene scene={stage.scene} mode={stage.mode} settings={values} />
-      <NavArrows previous={previousPath} next={nextPath} />
-      <Caption
-        chapter={chapter}
-        stage={stage}
-        stageIndex={position.stageIndex}
-      />
-      <Chrome
-        showHint={!settingsSeen}
-        onOpenSettings={openSettings}
-        onOpenAbout={() => setPanel("about")}
-      />
-      <SettingsPanel
-        open={panel === "settings"}
-        onClose={() => setPanel("none")}
-        specs={specs}
-        values={values}
-        onChange={(key, value) =>
-          setValues((current) => ({ ...current, [key]: value }))
-        }
-        onReset={() => setValues(defaultValues(specs))}
-      />
-      <AboutPanel open={panel === "about"} onClose={() => setPanel("none")} />
-    </div>
+    <ExtraSettingsProvider>
+      <div className="relative h-full w-full overflow-hidden">
+        <Paper />
+        <Scene scene={stage.scene} mode={stage.mode} settings={values} />
+        <NavArrows previous={previousPath} next={nextPath} />
+        <Caption
+          chapter={chapter}
+          stage={stage}
+          stageIndex={position.stageIndex}
+        />
+        <Chrome
+          showHint={!settingsSeen}
+          onOpenSettings={openSettings}
+          onOpenAbout={() => setPanel("about")}
+        />
+        <SettingsPanel
+          open={panel === "settings"}
+          onClose={() => setPanel("none")}
+          specs={specs}
+          values={values}
+          onChange={(key, value) =>
+            setValues((current) => ({ ...current, [key]: value }))
+          }
+          onReset={() => setValues(defaultValues(specs))}
+        />
+        <AboutPanel open={panel === "about"} onClose={() => setPanel("none")} />
+      </div>
+    </ExtraSettingsProvider>
   );
 }

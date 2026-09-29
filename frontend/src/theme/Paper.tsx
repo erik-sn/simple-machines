@@ -47,20 +47,26 @@ export function Paper() {
       return;
     }
     let cancelled = false;
-    paperRaster(theme, size.width, size.height).then((raster) => {
-      const canvas = canvasRef.current;
-      if (cancelled || canvas === null) {
-        return;
-      }
-      canvas.width = raster.width;
-      canvas.height = raster.height;
-      const context = canvas.getContext("2d", { alpha: false });
-      if (context === null) {
-        throw new Error("Could not draw the paper: no 2D context");
-      }
-      context.drawImage(raster, 0, 0);
-      setReady(true);
-    });
+    paperRaster(theme, size.width, size.height).then(
+      (raster) => {
+        const canvas = canvasRef.current;
+        if (cancelled || canvas === null) {
+          return;
+        }
+        canvas.width = raster.width;
+        canvas.height = raster.height;
+        const context = canvas.getContext("2d", { alpha: false });
+        if (context === null) {
+          throw new Error("Could not draw the paper: no 2D context");
+        }
+        context.drawImage(raster, 0, 0);
+        setReady(true);
+      },
+      (error: unknown) => {
+        // The base colour is already painted; a failed raster is still an error.
+        throw error;
+      },
+    );
     return () => {
       cancelled = true;
     };

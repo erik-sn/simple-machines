@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import type { SettingSpec, SettingValues } from "../scenes/settings";
 import { useTheme } from "../theme/ThemeProvider";
 import { THEMES } from "../theme/themes";
+import { useExtraSection } from "./extraSettings";
 
 interface Props {
   open: boolean;
@@ -25,6 +26,7 @@ export function SettingsPanel({
   const headingId = useId();
   const themeGroupId = useId();
   const { theme, setTheme } = useTheme();
+  const section = useExtraSection();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -117,6 +119,52 @@ export function SettingsPanel({
             className="font-display text-ink-soft hover:text-ink text-xs uppercase tracking-widest"
           >
             Reset
+          </button>
+        </div>
+      )}
+      {section !== null && (
+        <div className="mt-5 space-y-3 border-ink-faint border-t pt-4">
+          <h3 className="font-display text-ink-soft text-xs uppercase tracking-widest">
+            {section.title}
+          </h3>
+          {section.specs.map((spec) => (
+            <label key={spec.key} className="font-body block text-sm">
+              <span className="flex justify-between">
+                <span>{spec.label}</span>
+                <span className="text-ink-soft">
+                  {section.values[spec.key] ?? spec.defaultValue}
+                  {spec.unit !== undefined ? ` ${spec.unit}` : ""}
+                </span>
+              </span>
+              <input
+                type="range"
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                value={section.values[spec.key] ?? spec.defaultValue}
+                onChange={(event) =>
+                  section.onChange(spec.key, Number(event.currentTarget.value))
+                }
+                className="mt-1 w-full"
+              />
+            </label>
+          ))}
+          {section.onTogglePinned !== undefined && (
+            <label className="font-body flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={section.pinned === true}
+                onChange={section.onTogglePinned}
+              />
+              Pinned to the page
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={section.onRemove}
+            className="font-display text-ink-soft hover:text-ink text-xs uppercase tracking-widest"
+          >
+            Remove it from the bench
           </button>
         </div>
       )}
