@@ -42,6 +42,7 @@ export const THEATRE_SETTINGS: readonly SettingSpec[] = [
 const CAMERA = { x: 0, y: 0.4, height: 6, width: 9 };
 const SNAP_RADIUS = 0.3;
 const PORT_RADIUS = 0.06;
+const ROPE_HANG = 0.6;
 
 interface Props {
   settings: SettingValues;
@@ -60,7 +61,8 @@ export function TheatreView({ settings }: Props) {
     const node = {
       id,
       kind,
-      x: -3 + (count % 3) * 3,
+      // Clear of the bench list on the left; the visitor drags it from here.
+      x: -1 + (count % 3) * 3,
       y: 1.4 - Math.floor(count / 3) * 2.2,
       settings: {},
       // A weight waits, pinned, until something holds it.
@@ -437,10 +439,18 @@ function Bench({
       : !loose(b).fixed
         ? b.node.id
         : null;
+    // A rope hangs its end a little below the anchor; a pin meets it exactly.
+    const hang = joint === "rope" ? ROPE_HANG : 0;
     const delta =
       shifted === a.node.id
-        ? { x: pb.x - pa.x, y: pb.y - pa.y }
-        : { x: pa.x - pb.x, y: pa.y - pb.y };
+        ? {
+            x: pb.x - pa.x,
+            y: pb.y - pa.y - (a.port.kind === "ropeEnd" ? hang : -hang),
+          }
+        : {
+            x: pa.x - pb.x,
+            y: pa.y - pb.y - (b.port.kind === "ropeEnd" ? hang : -hang),
+          };
     const linked = new Set([a.node.id, b.node.id]);
     onChange({
       ...composition,
