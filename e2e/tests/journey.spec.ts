@@ -1,8 +1,13 @@
 // The template's core journey: sign in against the real backend, load real
 // data through the generated client, render it. Grows with the project;
 // depends on the seed_e2e management command.
+import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { expectNoAccessibilityViolations } from "./a11y";
+
+// Frontend-only project (project.json): nothing answers the sign-in request.
+// Same guard playwright.config.ts uses to skip starting Django.
+test.skip(!existsSync("../backend"), "needs the backend stack");
 
 test("sign in and read notes end to end", async ({ page }) => {
   await page.goto("/");
