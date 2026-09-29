@@ -1,0 +1,125 @@
+import { useEffect, useId, useRef } from "react";
+import type { SettingSpec, SettingValues } from "../scenes/settings";
+import { useTheme } from "../theme/ThemeProvider";
+import { THEMES } from "../theme/themes";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  specs: readonly SettingSpec[];
+  values: SettingValues;
+  onChange: (key: string, value: number) => void;
+  onReset: () => void;
+}
+
+// A non-modal panel: the reader tunes a slider while the scene keeps moving.
+export function SettingsPanel({
+  open,
+  onClose,
+  specs,
+  values,
+  onChange,
+  onReset,
+}: Props) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const headingId = useId();
+  const themeGroupId = useId();
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog === null) {
+      return;
+    }
+    if (open && !dialog.open) {
+      dialog.show();
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={headingId}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          onClose();
+        }
+      }}
+      className="bg-paper text-ink absolute top-14 right-4 m-0 w-72 border border-ink-faint p-5 shadow-none"
+    >
+      <div className="flex items-baseline justify-between">
+        <h2
+          id={headingId}
+          className="font-display text-sm uppercase tracking-widest"
+        >
+          Settings
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close settings"
+          className="text-ink-soft hover:text-ink font-display text-xl leading-none"
+        >
+          ×
+        </button>
+      </div>
+      <fieldset className="mt-4 border-0 p-0">
+        <legend id={themeGroupId} className="font-body text-ink-soft text-sm">
+          Paper
+        </legend>
+        <div className="mt-1 space-y-1">
+          {THEMES.map((option) => (
+            <label
+              key={option.id}
+              className="font-body flex items-center gap-2 text-base"
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={option.id}
+                checked={theme === option.id}
+                onChange={() => setTheme(option.id)}
+              />
+              {option.name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {specs.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {specs.map((spec) => (
+            <label key={spec.key} className="font-body block text-sm">
+              <span className="flex justify-between">
+                <span>{spec.label}</span>
+                <span className="text-ink-soft">
+                  {values[spec.key] ?? spec.defaultValue}
+                  {spec.unit !== undefined ? ` ${spec.unit}` : ""}
+                </span>
+              </span>
+              <input
+                type="range"
+                min={spec.min}
+                max={spec.max}
+                step={spec.step}
+                value={values[spec.key] ?? spec.defaultValue}
+                onChange={(event) =>
+                  onChange(spec.key, Number(event.currentTarget.value))
+                }
+                className="mt-1 w-full"
+              />
+            </label>
+          ))}
+          <button
+            type="button"
+            onClick={onReset}
+            className="font-display text-ink-soft hover:text-ink text-xs uppercase tracking-widest"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+    </dialog>
+  );
+}
