@@ -61,16 +61,16 @@ export const CHAPTERS: readonly Chapter[] = [
           "A machine trades force for distance, nothing else. Galileo writes that the force runs its course as many times as the load outweighs it; whoever hopes for the same effect without the slowness will certainly be deceived.",
         ],
         mode: "driven",
-        scene: { kind: "frontispiece" },
+        scene: { kind: "lever" },
       },
       {
         id: "archimedes",
         title: "Archimedes at Syracuse",
         text: [
-          "Plutarch has Archimedes haul a loaded ship along the beach by a system of compound pulleys. His boast about moving the earth survives in Pappus, 5 centuries on, praising a gear train. No ancient text puts a lever in his hand.",
+          "Plutarch has Archimedes haul a ship along the beach by compound pulleys. Give me where I may stand, and I move the earth: it survives in Pappus, 5 centuries on, praising a gear train. No ancient text puts a lever in his hand.",
         ],
         mode: "still",
-        scene: { kind: "frontispiece" },
+        scene: { kind: "lever" },
       },
       {
         id: "heron",
@@ -79,16 +79,16 @@ export const CHAPTERS: readonly Chapter[] = [
           "In the 1st century Heron counts 5 powers, all of one nature, he says, though very different in form; the ramp is not among them. His Greek is lost, the book survives in Arabic, and Europe meets his five through Pappus.",
         ],
         mode: "still",
-        scene: { kind: "frontispiece" },
+        scene: { kind: "lever" },
       },
       {
         id: "six",
-        title: "How the list was made",
+        title: "Five, then six",
         text: [
-          "Guidobaldo proves Heron's 5 in 1577; Stevin and Galileo give the ramp its law. Descartes, in 1637, is the earliest to count 6 with the plane. Desaguliers still counts 7 in 1734; the textbook 6 settle late in the 18th century.",
+          "Heron's 5 are lever, wheel and axle, pulley, wedge and screw. Stevin and Galileo give the ramp its law; Descartes counts 6 with it in 1637 and calls the count a convention. The textbook 6 settle late in the 18th century.",
         ],
         mode: "still",
-        scene: { kind: "frontispiece" },
+        scene: { kind: "lever" },
       },
       {
         id: "read",
@@ -97,7 +97,7 @@ export const CHAPTERS: readonly Chapter[] = [
           "Every drawing is alive: take hold of a part and pull, and the margin keeps the numbers. The gear at the top right tunes the paper and the physics of each page; the arrows at the edges, or the arrow keys, turn the pages.",
         ],
         mode: "free",
-        scene: { kind: "frontispiece" },
+        scene: { kind: "lever" },
       },
     ],
   },
@@ -110,7 +110,7 @@ export const CHAPTERS: readonly Chapter[] = [
       {
         id: "rest",
         text: [
-          "A bar and a point to turn on. Egypt is weighing with it by 2600 BC, and the Greeks explain every other machine by reducing it to this one, and this one to the balance.",
+          "A bar and a point to turn on. Egypt is weighing with it by 2600 BC, and the Greeks explain nearly every other machine by reducing it to this one, and this one to the balance.",
         ],
         mode: "still",
         scene: { kind: "lever" },
@@ -140,13 +140,13 @@ export const CHAPTERS: readonly Chapter[] = [
           "Jordanus, in the 13th century, proves it from work: one weight lifts another only by falling farther. Galileo calls it a most fertile spring from which many instruments derive, and derives windlass, pulley and screw from it.",
         ],
         mode: "driven",
-        scene: { kind: "lever" },
+        scene: { kind: "lever", variant: "class2" },
       },
       {
         id: "rule",
-        title: "The rule",
+        title: "Arm over arm",
         text: [
-          "Load times its arm equals effort times its arm, so the ideal advantage is the effort arm over the load arm. A crowbar with 90 cm of handle and 10 cm of tip gives 9: the tip rises 1 cm for every 9 cm the handle drops.",
+          "Load times its arm equals effort times its arm: the ideal advantage is the effort arm over the load arm, 2.6 on this bar. A crowbar with 90 cm of handle and 10 cm of tip gives 9, the tip rising 1 cm for every 9 the handle drops.",
         ],
         mode: "driven",
         scene: { kind: "lever" },
@@ -187,7 +187,7 @@ export const CHAPTERS: readonly Chapter[] = [
       },
       {
         id: "bars",
-        title: "Longer bars",
+        title: "Bigger circles",
         text: [
           "The Mechanical Problems ask why longer bars turn the same capstan more easily, and answer that the radii of greater circles are moved more readily and further by the same force. The wheel is that bar, swept all the way round.",
         ],
@@ -207,7 +207,7 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "agricola",
         title: "Agricola's mines",
         text: [
-          "Agricola's miners of 1556 wind ore up the shaft on a windlass with 2 cranks, hang masses of lead on the spokes of a wheel to keep it turning, and drive whims with horses, 4 of them if the shaft is very deep.",
+          "Agricola's miners of 1556 wind ore up the shaft on a windlass, hang masses of lead on the spokes of a wheel to keep it turning, and drive horse whims, 4 horses to a whim if the shaft is very deep.",
         ],
         mode: "driven",
         scene: { kind: "wheel-and-axle", variant: "windlass" },
@@ -225,10 +225,10 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "try",
         title: "Try it",
         text: [
-          "Take the rim and turn it; the rope winds onto the axle and the load climbs. In the settings, widen the wheel or thin the axle and watch Ideal advantage grow, while every metre of rope costs more turns of the rim.",
+          "Take the rim and turn it; the rope winds onto the axle and the load climbs. In the settings, widen the wheel or thin the axle and watch Ideal advantage grow, while Rope out shows every metre of rope costing more rim.",
         ],
         mode: "free",
-        scene: { kind: "wheel-and-axle", variant: "windlass" },
+        scene: { kind: "wheel-and-axle" },
       },
       {
         id: "doorknob",
@@ -250,7 +250,7 @@ export const CHAPTERS: readonly Chapter[] = [
       {
         id: "rest",
         text: [
-          "A rope over a wheel. By itself it turns a pull around and nothing more: Galileo writes that it brings no ease to the force, only to the way of applying it.",
+          "A rope over a wheel, a sheave. By itself it turns a pull around and nothing more: Galileo writes that it brings no ease to the force, only to the way of applying it.",
         ],
         mode: "still",
         scene: { kind: "pulley", variant: "fixed" },
@@ -259,10 +259,10 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "crane",
         title: "The crane shrinks the stones",
         text: [
-          "From about 515 BC Greek temple blocks carry cuttings for lifting tongs: the crane has arrived. The century before set at least 13 stones over 20 tons; the century after sets none. The machine makes the builders cut smaller.",
+          "From about 515 BC Greek temple blocks carry cuttings for lifting tongs: the crane has arrived. The century before sets at least 13 stones over 20 tons; the century after sets none. The machine makes the builders cut smaller.",
         ],
         mode: "driven",
-        scene: { kind: "pulley", variant: "fixed" },
+        scene: { kind: "pulley", variant: "movable" },
       },
       {
         id: "ship",
@@ -284,9 +284,9 @@ export const CHAPTERS: readonly Chapter[] = [
       },
       {
         id: "rule",
-        title: "The rule",
+        title: "Strand by strand",
         text: [
-          "Hang the pulley from the load and the rope holds it twice; each strand carries half. Any tackle's ideal advantage is its count of strands at the moving block, and to lift the load 1 m the hand pulls in as many metres of rope.",
+          "Guidobaldo reduces every block to a lever: the more easily a power can move a weight, the more slowly it does so. Galileo calls Aristotle childish for thinking a bigger sheave helps: the sheave is nothing, the rope everything.",
         ],
         mode: "driven",
         scene: { kind: "pulley", variant: "movable" },
@@ -295,7 +295,7 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "try",
         title: "Try it",
         text: [
-          "Pull the free end down. In the settings, add sheaves to the moving block and watch Ideal advantage count the strands; Effort falls by the same count, and the rope you pull in grows by it.",
+          "Pull the free end down. In the settings, raise Strands and watch Ideal advantage count them; Effort falls by the same count, and Rope pulled grows by it for the same Load raised.",
         ],
         mode: "free",
         scene: { kind: "pulley", variant: "tackle" },
@@ -320,7 +320,7 @@ export const CHAPTERS: readonly Chapter[] = [
       {
         id: "rest",
         text: [
-          "The oldest machine in use and the last on the list. Every hillside is one, so the Greeks, who count a machine by its parts, do not count it, and its law defeats them.",
+          "The last machine on the list, and the one nobody had to invent. Every hillside is one, so the Greeks, who count a machine by its parts, do not count it, and its law defeats them.",
         ],
         mode: "still",
         scene: { kind: "inclined-plane" },
@@ -329,7 +329,7 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "hatnub",
         title: "The ramp at Hatnub",
         text: [
-          "At Hatnub in Egypt a quarry ramp found in 2018 climbs at 20 percent or more between 2 staircases lined with postholes; Khufu's masons cut it about 2560 BC. Blocks on sledges go up it, the ropes turned round the posts.",
+          "At Hatnub in Egypt a quarry ramp reported in 2018 climbs at 20 percent or more between 2 staircases lined with postholes; Khufu's masons cut it about 2560 BC. Blocks on sledges go up it, the ropes turned round the posts.",
         ],
         mode: "driven",
         scene: { kind: "inclined-plane" },
@@ -340,16 +340,16 @@ export const CHAPTERS: readonly Chapter[] = [
         text: [
           "Pappus, about AD 320, reckons that a sphere of 200 talents needing 40 men on the level needs 300 on a 60-degree slope. The answer is wrong. Printed in 1588 and held by Guidobaldo, it stands until Galileo calls it false.",
         ],
-        mode: "driven",
+        mode: "still",
         scene: { kind: "inclined-plane" },
       },
       {
         id: "stevin",
         title: "Wonder is no wonder",
         text: [
-          "In 1586 Stevin hangs a wreath of 14 equal spheres over a prism, 4 on the long slope against 2 on the short. If they did not balance, the wreath would turn for ever, which is absurd. Under it he writes: wonder is no wonder.",
+          "In 1586 Stevin draws a wreath of 14 equal spheres over a prism, 4 on the long slope against 2 on the short. If they did not balance, the wreath would turn for ever, which is absurd. Beneath it he writes: wonder is no wonder.",
         ],
-        mode: "driven",
+        mode: "still",
         scene: { kind: "inclined-plane" },
       },
       {
@@ -402,7 +402,7 @@ export const CHAPTERS: readonly Chapter[] = [
           "Heron writes that to split a stone from its bed none of the other powers works, not even all combined; the wedge alone works there. Its action does not cease when the blow ceases: often it creaks without being struck.",
         ],
         mode: "driven",
-        scene: { kind: "wedge", variant: "log" },
+        scene: { kind: "wedge" },
       },
       {
         id: "failure",
@@ -411,16 +411,16 @@ export const CHAPTERS: readonly Chapter[] = [
           "The Mechanical Problems call the wedge two levers opposite to each other. Guidobaldo finds the fulcrums move as the split opens and gives the wedge the only chapter of his book without a proposition. Galileo leaves it out.",
         ],
         mode: "driven",
-        scene: { kind: "wedge" },
+        scene: { kind: "wedge", variant: "log" },
       },
       {
         id: "agricola",
         title: "The vein rings",
         text: [
-          "Agricola's miners of 1556 drive iron wedges between iron plates into a crack, striking by turns, whereby the vein rings with a shrill sound. At a tearing sound the miners hastily flee away; then a great crash.",
+          "In Agricola's mines of 1556 iron wedges are driven between iron plates into a crack, struck by turns, whereby the vein rings with a shrill sound. At a tearing sound the miners hastily flee away; then a great crash.",
         ],
         mode: "driven",
-        scene: { kind: "wedge", variant: "log" },
+        scene: { kind: "wedge" },
       },
       {
         id: "rule",
@@ -429,13 +429,13 @@ export const CHAPTERS: readonly Chapter[] = [
           "The ideal advantage is length over the width of the heel: 20 cm long and 4 cm at the back, a wedge turns a blow into 5 times the push on each face. Heron's rule for a heavier load is not a bigger wedge but a thinner one.",
         ],
         mode: "driven",
-        scene: { kind: "wedge" },
+        scene: { kind: "wedge", variant: "log" },
       },
       {
         id: "try",
         title: "Try it",
         text: [
-          "Strike the wedge; each blow drives it a little and friction holds the gain. In the settings, sharpen the angle and watch Ideal advantage climb: the faces push harder, and the wedge sinks farther for the same opening.",
+          "Press the wedge in; when you let go, Self-locking says whether friction keeps the gain. In the settings, sharpen the angle and watch Ideal advantage climb: the faces push harder, and the wedge sinks farther for the same opening.",
         ],
         mode: "free",
         scene: { kind: "wedge", variant: "log" },
@@ -478,16 +478,16 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "press",
         title: "The press",
         text: [
-          "Pliny, in the 1st century, calls the screw press an invention of the last hundred years, its upright beam grooved spirally; Heron cuts the female thread for it. A wine press with a bar on its screw prints books 14 centuries on.",
+          "Pliny, in the 1st century, calls the screw press an invention of the last hundred years, its upright beam grooved spirally; Heron cuts the female thread for it. Give the wine press a bar on its screw and it prints books.",
         ],
         mode: "driven",
         scene: { kind: "screw", variant: "press" },
       },
       {
         id: "wound",
-        title: "The plane wound up",
+        title: "A door off its hinges",
         text: [
-          "Guidobaldo, in 1577, calls the thread nothing but a plane inclined to the horizon wound round a cylinder. Ramelli, in 1588, draws screw jacks by the dozen, one to lift a door off its hinges, easily and with little noise.",
+          "Ramelli, in 1588, draws screw jacks by the dozen, one to lift a door off its hinges, easily and with little noise. Guidobaldo, 11 years before, has the thread's secret: a plane inclined to the horizon wound round a cylinder.",
         ],
         mode: "driven",
         scene: { kind: "screw", variant: "jack" },
@@ -496,7 +496,7 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "rule",
         title: "The longest road",
         text: [
-          "Galileo's rule: the force is multiplied as the whole length of the thread exceeds the height. A 300 mm handle on a 1.5 mm lead gives about 1,257 on paper; friction wastes most of it, and that waste is why the jack holds.",
+          "Galileo's rule: the force grows as the hand's road exceeds the rise. A 300 mm handle sweeps 1885 mm a turn and a fine thread climbs 1.5 mm: about 1257 on paper. Friction wastes most of it, and that waste is why the jack holds.",
         ],
         mode: "driven",
         scene: { kind: "screw", variant: "jack" },
@@ -539,7 +539,7 @@ export const CHAPTERS: readonly Chapter[] = [
         id: "multiply",
         title: "Advantages multiply",
         text: [
-          "Chain them and the advantages multiply: a lever of 4 driving a tackle of 3 gives 12, and the effort travels 12 times as far as the load. So do the losses: every joint takes its cut, and a long train stalls on friction.",
+          "Chain them and the advantages multiply: a lever of 4 driving a tackle of 3 gives 12, and the effort travels 12 times as far. So do the losses; every joint takes its cut. One law holds across the bench: save force, pay in road.",
         ],
         mode: "free",
         scene: { kind: "theatre" },
