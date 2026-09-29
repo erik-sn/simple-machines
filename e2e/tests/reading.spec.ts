@@ -16,7 +16,14 @@ test("turning the pages from the title page into the first chapter", async ({
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL("/introduction/3");
   await expect(
-    page.getByRole("heading", { name: "How the list was made" }),
+    page.getByRole("heading", { name: "Archimedes at Syracuse" }),
+  ).toBeVisible();
+  for (const stage of [4, 5, 6]) {
+    await page.keyboard.press("ArrowRight");
+    await expect(page).toHaveURL(`/introduction/${stage}`);
+  }
+  await expect(
+    page.getByRole("heading", { name: "How to read" }),
   ).toBeVisible();
   await page.keyboard.press("ArrowRight");
   await expect(page).toHaveURL("/lever");
@@ -24,7 +31,7 @@ test("turning the pages from the title page into the first chapter", async ({
   await expectNoAccessibilityViolations(page);
 
   await page.keyboard.press("ArrowLeft");
-  await expect(page).toHaveURL("/introduction/3");
+  await expect(page).toHaveURL("/introduction/6");
 });
 
 test("the settings hint shows once and the chosen paper persists", async ({

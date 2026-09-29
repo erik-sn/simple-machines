@@ -51,8 +51,12 @@ export function AboutPanel({ open, onClose }: Props) {
         </button>
       </div>
       <p className="font-body mt-4 text-base leading-relaxed">
-        A short book on the six simple machines. Every drawing is a working
-        model: touch it and it obeys the same laws it did in 1600.
+        An interactive treatise on the six simple machines, drawn as ink on old
+        paper: every drawing is a live physics model you can take hold of and
+        tune, and every chapter follows one machine from the quarry to the
+        proof. The one law they all keep, that force is bought with distance and
+        no machine works for free, was written down by Galileo around 1600; the
+        Theatre at the end lets you chain the six and watch it hold.
       </p>
       <h3 className="font-display text-ink-soft mt-6 text-xs uppercase tracking-widest">
         Contents
