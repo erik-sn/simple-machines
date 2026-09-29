@@ -193,7 +193,9 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
           </g>
         </g>
       </svg>
-      <Marginalia store={controller.readouts} />
+      {scene.kind !== "frontispiece" && (
+        <Marginalia store={controller.readouts} />
+      )}
     </div>
   );
 }
