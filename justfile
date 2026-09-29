@@ -9,3 +9,7 @@ import 'template.just'
 # No unit tests in this project (PROJECT.md): the Playwright suite is the test gate.
 test:
     @echo "test: no unit tests in this project (PROJECT.md); run just e2e"
+
+# Screenshot every page in every theme and viewport into DIR (starts its own Vite on port 5190).
+shots DIR:
+    cd e2e && node tools/screenshots.ts "{{ absolute_path(DIR) }}"
