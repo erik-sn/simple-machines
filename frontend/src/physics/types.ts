@@ -40,6 +40,9 @@ export type Shape =
       fill?: boolean;
       outline?: boolean;
       hatch?: { angle: number };
+      // Painted paper-white first, so it hides whatever was drawn before it
+      // (a nut in front of a thread, a block in front of a rope).
+      opaque?: boolean;
       stroke?: Stroke;
       weight?: number;
       dash?: Dash;
@@ -50,6 +53,7 @@ export type Shape =
       radius: number;
       fill?: boolean;
       hatch?: { angle: number };
+      opaque?: boolean;
       stroke?: Stroke;
       weight?: number;
       dash?: Dash;

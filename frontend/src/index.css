@@ -290,7 +290,7 @@ body {
   .marginalia {
     left: 0;
     right: 0;
-    top: 60svh;
+    top: 58svh;
     bottom: auto;
     display: flex;
     flex-wrap: wrap;
@@ -379,11 +379,17 @@ dialog::backdrop {
   stroke-width: var(--stroke-hair);
   stroke-linecap: butt;
 }
+/* An opaque part: paper-white under multiply is the paper itself, and it
+   hides whatever was drawn before it. */
+.ink path[data-fill="paper"] {
+  fill: #fff;
+  stroke: none;
+}
 
 /* The drawing draws itself when a page opens. */
 @media (prefers-reduced-motion: no-preference) {
-  .ink-static path:not([data-dash]),
-  .ink-dynamic path:not([data-dash]) {
+  .ink-static path:not([data-dash]):not([data-fill]),
+  .ink-dynamic path:not([data-dash]):not([data-fill]) {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
     animation: 900ms ease-out both draw-on;
@@ -437,21 +443,33 @@ dialog::backdrop {
 /* The Theatre: ports the visitor may join, handles that move a machine, and
    the line drawn while joining. */
 .port {
-  fill: var(--paper);
-  stroke: var(--ink-soft);
-  stroke-width: 1.2px;
+  fill: #fff;
+  stroke: var(--ink-faint);
+  stroke-width: 1px;
   cursor: crosshair;
+  opacity: 0.4;
+  transition: opacity 200ms ease-out;
+}
+[data-node]:hover .port,
+.port-candidate {
+  opacity: 1;
 }
 .port-candidate {
   stroke: var(--accent);
   stroke-width: 2px;
 }
 .node-handle {
-  fill: var(--paper);
+  fill: #fff;
   stroke: var(--ink-faint);
   stroke-width: 1px;
   stroke-dasharray: 2 3;
   cursor: move;
+  opacity: 0.35;
+  transition: opacity 200ms ease-out;
+}
+[data-node]:hover .node-handle,
+.node-selected {
+  opacity: 1;
 }
 .node-selected {
   stroke: var(--ink);
@@ -484,8 +502,8 @@ dialog::backdrop {
   gap: 0.25rem;
 }
 .bench-item svg {
-  width: 64px;
-  height: 42px;
+  width: 96px;
+  height: 64px;
 }
 .bench-item {
   display: flex;
@@ -494,15 +512,16 @@ dialog::backdrop {
   gap: 0.15rem;
 }
 .bench-item svg path {
-  stroke-width: 1px;
+  stroke-width: 1.1px;
 }
 .bench-item svg path[data-stroke="hatch"] {
-  stroke-width: 0.5px;
+  stroke-width: 0.6px;
 }
 @media (max-width: 640px) {
   .bench-list {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: 0.3rem 0.6rem;
     max-width: 100vw;
   }

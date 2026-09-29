@@ -79,9 +79,13 @@ export function SceneView({
   const aspect = size.width / size.height;
   const viewHeight = Math.max(camera.height, camera.width / aspect);
   const viewWidth = viewHeight * aspect;
+  // A tall viewport keeps the plate in its upper part, clear of the margin
+  // notes and the placard: the spare height goes one quarter above.
+  const spare = viewHeight - camera.height;
+  const above = aspect < 0.7 ? spare * 0.25 : spare / 2;
   const viewBox = {
     x: camera.x - viewWidth / 2,
-    y: -camera.y - viewHeight / 2,
+    y: -camera.y - camera.height / 2 - above,
     width: viewWidth,
     height: viewHeight,
   };
