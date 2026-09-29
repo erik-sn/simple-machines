@@ -1,0 +1,17 @@
+# template-managed (bootstrap): do not edit; new JS packages join the list.
+# Delete this line to take ownership.
+packages:
+  - frontend
+  - e2e
+
+# Supply-chain settings: hold new releases for 7 days (matches
+# Renovate's cooldown; security fixes bypass it by pinning exact fixed
+# versions) and never run dependency install scripts unless allowlisted.
+minimumReleaseAge: 10080
+onlyBuiltDependencies: []
+minimumReleaseAgeExclude:
+  # Renovate security update: vitest@4.1.11
+  - vitest@4.1.11
+allowBuilds:
+  # msw's postinstall only prints a support message; nothing needs building.
+  msw: false

@@ -1,0 +1,13 @@
+{
+  "name": "Simple Machines",
+  "slug": "simple-machines",
+  "description": "Creating simple machines",
+  "github_owner": "github.com/erik-sn/simple-machines",
+  "registry": "ghcr.io/github.com/erik-sn/simple-machines",
+  "stacks": {
+    "backend": false,
+    "frontend": true,
+    "rust": false
+  },
+  "template_takeovers": []
+}

@@ -1,0 +1,42 @@
+# template-managed (bootstrap): do not edit; extend via lefthook-local.yml.
+# Delete this line to take ownership.
+#
+# Git hooks (installed by `just setup`, binary pinned in mise.toml).
+# pre-commit auto-formats staged files and restages them (stage_fixed), then
+# lints the touched stack. Type checks, tests, and drift gates run in CI and
+# `just check` only - hooks stay fast, and CI is the authoritative gate that a
+# --no-verify cannot bypass. Glob scoping means absent stacks naturally no-op.
+# mise-pinned tools run through `mise x` because git clients (IDEs, agent
+# subprocesses) invoke hooks from shells that never activated mise; cargo is
+# rustup's and already on PATH.
+
+pre-commit:
+  parallel: false
+  skip:
+    - merge
+    - rebase
+  commands:
+    01-fmt-python:
+      glob: '*.py'
+      run: mise x -- ruff format {staged_files}
+      stage_fixed: true
+    # root runs the command inside frontend/ and rewrites {staged_files} to be
+    # relative to it, which is what Biome needs from there.
+    02-fmt-biome:
+      root: 'frontend/'
+      glob: '*.{ts,tsx,js,json,css}'
+      run: mise x -- pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    03-fmt-rust:
+      glob: '*.rs'
+      run: cargo fmt --all
+      stage_fixed: true
+    04-lint-python:
+      glob: '*.py'
+      run: mise x -- ruff check {staged_files}
+    05-lint-rust:
+      glob: '*.rs'
+      run: cargo clippy --workspace --all-targets -- -D warnings
+    # Unresolved `copier update` conflict markers must never land.
+    06-conflict-markers:
+      run: git diff --cached --check

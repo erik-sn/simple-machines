@@ -1,0 +1,106 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "files": {
+    "includes": ["**", "!dist", "!coverage", "!src/store/generatedApi.ts"]
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "react": "recommended",
+      "test": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noNestedComponentDefinitions": "error",
+        "noReactPropAssignments": "error",
+        "useExhaustiveDependencies": "error",
+        "useUniqueElementIds": "error"
+      },
+      "performance": {
+        "noBarrelFile": "error",
+        "noNamespaceImport": "warn",
+        "noReExportAll": "error"
+      },
+      "style": {
+        "noEnum": "error",
+        "noNonNullAssertion": "error",
+        "noParameterAssign": "error",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Server calls are RTK Query hooks from src/store/api.ts; the network is touched only by baseApi and the MSW test handlers."
+            }
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "react-router-dom": "Import from react-router; react-router-dom is the legacy entry point.",
+              "axios": "Server calls are RTK Query hooks from src/store/api.ts.",
+              "redux-form": "Forms are uncontrolled inputs read with FormData; state lives in the component.",
+              "react-redux-form": "Forms are uncontrolled inputs read with FormData; state lives in the component."
+            }
+          }
+        },
+        "useImportType": "error",
+        "useReactFunctionComponents": "error"
+      },
+      "suspicious": {
+        "noConsole": "error",
+        "noExplicitAny": "error",
+        "noReactForwardRef": "error"
+      },
+      "nursery": {
+        "noComponentHookFactories": "warn",
+        "noFloatingPromises": "warn",
+        "useExhaustiveSwitchCases": "warn",
+        "useReactCompiler": "warn"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/pages/**", "src/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react-router-dom": "Import from react-router; react-router-dom is the legacy entry point.",
+                  "axios": "Server calls are RTK Query hooks from src/store/api.ts.",
+                  "redux-form": "Forms are uncontrolled inputs read with FormData; state lives in the component.",
+                  "react-redux-form": "Forms are uncontrolled inputs read with FormData; state lives in the component."
+                },
+                "patterns": [
+                  {
+                    "group": ["**/store/generatedApi"],
+                    "message": "Screens import hooks from src/store/api.ts, where the generated endpoints are enhanced."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/test/**", "src/store/baseApi.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": "off"
+          }
+        }
+      }
+    }
+  ]
+}

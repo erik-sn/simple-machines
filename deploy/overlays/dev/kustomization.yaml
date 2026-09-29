@@ -1,0 +1,7 @@
+# Dev overlay: single replicas, dev image tags. The fleet repo layers its own
+# environment config (namespace, image pins, HTTPRoute) on deploy/base; these
+# overlays exist for local validation (just k8s-validate) and as reference.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base

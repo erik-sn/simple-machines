@@ -1,0 +1,36 @@
+# template-managed (bootstrap): do not edit. Delete this line to take ownership.
+#
+# GHCR has no built-in retention, so per-merge alpha images accumulate forever
+# without this. Policy: keep every release tag (semver and prereleases), keep
+# the newest sha-/edge builds, delete old untagged digests. The action handles
+# multi-arch child manifests safely (deleting children of a kept index is the
+# classic footgun).
+name: GHCR cleanup
+
+on:
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Read project facts
+        id: facts
+        run: echo "slug=$(jq -r .slug project.json)" >> "$GITHUB_OUTPUT"
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          packages: '${{ steps.facts.outputs.slug }}-*'
+          expand-packages: true
+          # Releases are kept forever; sha- history trimmed to the newest 20.
+          exclude-tags: '^v?\d+\.\d+\.\d+.*$|^latest$|^beta$|^edge$'
+          use-regex: true
+          keep-n-tagged: 20
+          delete-untagged: true

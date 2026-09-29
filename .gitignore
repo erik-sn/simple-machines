@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+
+# Rust
+target/
+
+# Local-only
+.env
+logs/
+.mise.local.toml
+lefthook-local.yml
+.claude/settings.local.json
+
+# Django
+staticfiles/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/

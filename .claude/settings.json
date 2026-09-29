@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just:*)",
+      "Bash(mise x:*)",
+      "Bash(mise run:*)",
+      "Bash(uv run:*)",
+      "Bash(uv tree:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm why:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(kustomize build:*)"
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+# template-managed (bootstrap): do not edit; machine-local additions belong in
+# .mise.local.toml. Delete this line to take ownership.
+#
+# mise pins every toolchain to an EXACT version (never "latest" or a bare
+# major) so dev machines, CI, and agent sandboxes resolve identical tools and
+# an upstream release cannot redden an unchanged branch. Renovate's mise
+# manager keeps the pins moving. Rust is deliberately absent:
+# rust-toolchain.toml owns it (rustup and cargo respect that file natively).
+#
+# All tools are pinned in every generated combination for simplicity; unused
+# ones cost install time only. Commands live in the justfile (`just --list`),
+# not here - mise manages tools and env, just manages tasks.
+
+[env]
+# Local configuration; every variable is required by the app (core/env.py).
+_.file = ".env"
+# uv builds .venv from the python pinned below (mise puts it on PATH), never
+# from its own managed downloads, so dev machines, CI, and agent sandboxes run
+# one interpreter release. The Dockerfile is unaffected: no mise there, and it
+# already disables uv's downloads in favor of the image's python.
+UV_PYTHON_PREFERENCE = "only-system"
+
+[tools]
+# renovate: datasource=github-releases depName=casey/just
+just = "1.58.0"
+# renovate: datasource=python-version depName=python
+python = "3.14.7"
+# renovate: datasource=pypi depName=uv
+uv = "0.12.16"
+# renovate: datasource=pypi depName=ruff
+ruff = "0.16.8"
+# renovate: datasource=npm depName=lefthook
+lefthook = "2.1.14"
+# renovate: datasource=node-version depName=node
+node = "24.21.0"
+# renovate: datasource=npm depName=pnpm
+pnpm = "12.6.0"
+# renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.+)$
+kustomize = "5.8.1"
+# renovate: datasource=crate depName=cargo-deny
+"ubi:EmbarkStudios/cargo-deny" = "0.20.2"
+# copier pulls template updates (copier update); template_check renders
+# pristine copies for the ownership gate.
+# renovate: datasource=pypi depName=copier
+"pipx:copier" = "9.18.2"
+# renovate: datasource=github-releases depName=jqlang/jq extractVersion=^jq-(?<version>.+)$
+jq = "1.8.2"

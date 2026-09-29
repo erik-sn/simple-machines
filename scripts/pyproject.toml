@@ -1,0 +1,19 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Project scripting area (uv workspace member)"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "mypy>=2.3.1",
+]
+
+# Plain scripts, not a package: run with `uv run --directory scripts <file>.py`.
+[tool.uv]
+package = false
+
+[tool.mypy]
+strict = true

@@ -1,0 +1,77 @@
+# template-managed (bootstrap): do not edit. Delete this line to take ownership.
+#
+# Self-hosted Renovate: dependency-update automation without granting a third
+# party read access to this private repository. Policy lives in
+# /renovate.json5 (read from the default branch).
+#
+# Daily cron on purpose: ordinary updates are gated to Monday by the in-repo
+# schedule, but security-advisory updates run "at any time", so a daily bot
+# run lands a CVE fix within a day instead of waiting a week.
+#
+# Requires the RENOVATE_TOKEN secret: a PAT with contents read/write,
+# pull-request read/write, and workflow read/write (that last one lets
+# Renovate bump action pins under .github/workflows/). The default
+# GITHUB_TOKEN cannot be used: PRs it opens never trigger CI, so nothing
+# would ever be mergeable. Add it as a repository (or organization) Actions
+# secret: `gh secret set RENOVATE_TOKEN`. Without it every run fails at the
+# first step and no Dependency Dashboard ever appears.
+name: Renovate
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: Renovate log level (debug shows dashboard and PR decisions)
+        type: choice
+        options: [info, debug]
+        default: info
+
+permissions: {}
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      # Docker Hub's tag API is the only source of image push dates, which the
+      # release-age check needs to age digests, and it caps anonymous paging at
+      # ten pages (popular images have far more tags). With the optional
+      # DOCKERHUB_* secrets (a read-only personal access token), exchange the
+      # token for a session token and give Renovate two host rules: registry
+      # credentials for docker.io and the bearer for hub.docker.com. Without
+      # the secrets Renovate runs anonymously and digests simply have no age.
+      - name: Docker Hub host rules
+        id: dockerhub
+        run: |
+          set -euo pipefail
+          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then
+            echo 'rules=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          session=$(curl -fsS -X POST https://hub.docker.com/v2/users/login \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -cn --arg u "$DOCKERHUB_USERNAME" --arg p "$DOCKERHUB_TOKEN" '{username: $u, password: $p}')" \
+            | jq -r .token)
+          echo "::add-mask::$session"
+          rules=$(jq -cn --arg u "$DOCKERHUB_USERNAME" --arg p "$DOCKERHUB_TOKEN" --arg t "$session" \
+            '[{hostType: "docker", matchHost: "docker.io", username: $u, password: $p},
+              {hostType: "docker", matchHost: "hub.docker.com", token: $t}]')
+          echo "rules=$rules" >> "$GITHUB_OUTPUT"
+      # Each release of this action bundles one exact Renovate release and
+      # Renovate updates its own pin, so nothing here floats.
+      - uses: renovatebot/github-action@dcfba84a42d1b5d5e49bf131b1bf53511851a123 # v46.3.1
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          LOG_LEVEL: ${{ inputs.log_level || 'info' }}
+          RENOVATE_HOST_RULES: ${{ steps.dockerhub.outputs.rules }}

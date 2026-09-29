@@ -1,0 +1,14 @@
+# Prod overlay: what production changes relative to base, independent of the
+# fleet (which still owns namespace, image pins, and routing). Passthrough by
+# default; patch example:
+#
+# patches:
+#   - target: { kind: Deployment, name: backend }
+#     patch: |-
+#       - op: replace
+#         path: /spec/replicas
+#         value: 2
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base

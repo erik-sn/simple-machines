@@ -1,0 +1,153 @@
+# template-managed (bootstrap): do not edit; project jobs go in their own
+# workflow files. Delete this line to take ownership.
+#
+# CI runs the exact recipes `just check` runs locally - CI is the same gate,
+# authoritative because nothing can bypass it. Stack-absent recipes no-op via
+# their directory guards, so this file is identical in every generated
+# combination. Actions are tag-pinned here; Renovate's best-practices preset
+# converts them to SHA pins on its first run and keeps them fresh.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Backend settings for tests; matches compose.yaml and the services below.
+  # A project's own required variables are not listed here: the first step of
+  # each job loads whatever .env.example names and this block does not set.
+  DJANGO_SECRET_KEY: ci-only-secret-key-not-a-real-secret
+  # staging: production-shaped settings (DEBUG off) without claiming to be
+  # production; dev would enable DEBUG and the dev-only conveniences.
+  ENVIRONMENT: staging
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+  POSTGRES_HOST: 127.0.0.1
+  POSTGRES_PORT: '5432'
+  POSTGRES_USER: app
+  POSTGRES_PASSWORD: app
+  POSTGRES_DB: app
+  # DB 0 broker and results, DB 1 cache: one instance, FLUSHDB-scoped.
+  REDIS_URL: redis://127.0.0.1:6379/0
+  CACHE_REDIS_URL: redis://127.0.0.1:6379/1
+
+jobs:
+  checks:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8@sha256:718f745deb7dfefeac6eed7041fc7ec9476b50e61b247932682457c41adafa0e
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Full history: the frozen-migration gate diffs against origin/main.
+          fetch-depth: 0
+      - name: Project variables the workflow does not set (.env.example)
+        run: |
+          while IFS= read -r line; do
+            case "$line" in ''|'#'*) continue ;; esac
+            name="${line%%=*}"
+            if [ -z "${!name+x}" ]; then echo "$line" >> "$GITHUB_ENV"; fi
+          done < .env.example
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+      - run: just migrations-frozen
+      - name: Install dependencies (locked)
+        run: |
+          uv sync --locked
+          if [ -f pnpm-workspace.yaml ]; then pnpm install --frozen-lockfile; fi
+          if [ -f Cargo.toml ]; then cargo fetch --locked; fi
+      - run: just lint
+      - run: just typecheck
+      - run: just test
+      - run: just drift
+      - run: just deploy-check
+      - run: just template-check
+        env:
+          # Optional: lets the ownership gate clone the private template repo.
+          TEMPLATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+
+  e2e:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8@sha256:718f745deb7dfefeac6eed7041fc7ec9476b50e61b247932682457c41adafa0e
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Project variables the workflow does not set (.env.example)
+        run: |
+          while IFS= read -r line; do
+            case "$line" in ''|'#'*) continue ;; esac
+            name="${line%%=*}"
+            if [ -z "${!name+x}" ]; then echo "$line" >> "$GITHUB_ENV"; fi
+          done < .env.example
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+      - name: Install dependencies (locked)
+        run: |
+          uv sync --locked
+          if [ -f pnpm-workspace.yaml ]; then pnpm install --frozen-lockfile; fi
+      # The db recipe skips under CI=true (services above provide the stores).
+      - run: just e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: e2e/test-results/
+          retention-days: 7
+
+  containers:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+      - run: just images
+      - run: just k8s-validate
+
+  ci-success:
+    needs: [checks, e2e, containers]
+    if: always()
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify all jobs succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: echo "$RESULTS" | jq -e 'all(.[]; .result == "success")'

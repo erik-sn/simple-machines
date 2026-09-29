@@ -1,0 +1,31 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong. Try again.",
+    "invalidFields": "Check the highlighted fields.",
+    "documentTitle": "{{screen}} - {{app}}"
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "body": "This screen could not be displayed.",
+    "retry": "Try again"
+  },
+  "login": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "notes": {
+    "title": "Notes",
+    "empty": "No notes yet.",
+    "words_one": "{{count}} word",
+    "words_other": "{{count}} words",
+    "banner": "The example banner flag is on.",
+    "logout": "Sign out",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}}"
+  }
+}

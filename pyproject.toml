@@ -1,0 +1,9 @@
+# template-managed (bootstrap): do not edit. Delete this line to take ownership.
+# Virtual uv workspace root: not a package, it only ties the Python members
+# together so one `uv sync` and one uv.lock cover everything. The globs match
+# nothing harmlessly when a stack or packages/ is absent (verified behavior),
+# which keeps this file identical across every generated combination.
+# Shared Python libraries belong in packages/<name> (consumable from other
+# repos via uv git sources with subdirectory - see docs/template.md).
+[tool.uv.workspace]
+members = ["backend*", "scripts", "packages/*"]

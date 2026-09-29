@@ -1,0 +1,102 @@
+// template-managed (bootstrap): do not edit; project-specific rules go below
+// the marked section or take ownership by deleting this line.
+//
+// Renovate policy for this project: one config for every ecosystem (uv, pnpm,
+// cargo, GitHub Actions, Docker images, mise toolchains, and the bootstrap
+// template itself via the copier manager). Runs self-hosted on a schedule
+// (.github/workflows/renovate.yml); needs the RENOVATE_TOKEN secret and branch
+// protection requiring ci-success, or automerge silently does nothing.
+//
+// Policy (bootstrap ADR 0002): 7-day supply-chain cooldown with a security
+// fast lane that bypasses it; grouped weekly minor PRs per ecosystem; patch
+// and dev-dependency automerge; majors parked on the Dependency Dashboard as
+// the quarterly maintenance queue.
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:best-practices', ':separateMultipleMajorReleases'],
+  minimumReleaseAge: '7 days',
+  schedule: ['before 6am on monday'],
+  labels: ['dependencies'],
+  prConcurrentLimit: 5,
+  dependencyDashboard: true,
+  lockFileMaintenance: {
+    // Weekly transitive refresh: keeps lockfile-only CVEs moving even when no
+    // direct dependency changed.
+    enabled: true,
+    automerge: true,
+    schedule: ['before 6am on monday'],
+  },
+  packageRules: [
+    { matchManagers: ['cargo'], groupName: 'rust dependencies' },
+    { matchManagers: ['npm'], groupName: 'javascript dependencies' },
+    { matchManagers: ['pep621'], groupName: 'python dependencies' },
+    {
+      matchManagers: ['github-actions', 'mise', 'custom.regex'],
+      groupName: 'toolchains and actions',
+    },
+    // Pins adopt nothing new (same tag, digest or SHA frozen), so the cooldown
+    // does not apply and they get their own PR instead of riding along with
+    // real bumps. Digest UPDATES (new build, same tag) still age normally,
+    // which needs Docker Hub push dates: see the optional DOCKERHUB_* secrets
+    // in the Renovate workflow.
+    {
+      matchUpdateTypes: ['pin', 'pinDigest'],
+      groupName: 'pin dependencies',
+      minimumReleaseAge: null,
+    },
+    // The uv image tag is a PyPI version: the annotated regex below ages it
+    // by uv's real publish time, so the docker manager stays out of it.
+    { matchManagers: ['dockerfile'], matchPackageNames: ['ghcr.io/astral-sh/uv'], enabled: false },
+    { matchUpdateTypes: ['patch'], automerge: true },
+    {
+      matchDepTypes: ['devDependencies', 'dev'],
+      matchUpdateTypes: ['patch', 'minor'],
+      automerge: true,
+    },
+    // Majors queue on the dashboard for the quarterly pass (one PR per major
+    // step via :separateMultipleMajorReleases).
+    { matchUpdateTypes: ['major'], dependencyDashboardApproval: true },
+  ],
+  vulnerabilityAlerts: {
+    // Security fixes skip the weekly schedule and the cooldown. Requires
+    // GitHub Dependabot alerts + dependency graph enabled on the repo.
+    schedule: ['at any time'],
+    minimumReleaseAge: null,
+    labels: ['security'],
+  },
+  // Second vulnerability source (OSV.dev, direct dependencies only).
+  osvVulnerabilityAlerts: true,
+  // No commit statuses: Renovate's informational checks (release-age, artifact
+  // errors) need statuses=write on the token, and one refused call aborts the
+  // whole run before PRs update or the dashboard is rewritten. The cooldown
+  // still gates PR creation through the dashboard; artifact errors still
+  // arrive as PR comments.
+  statusCheckNames: {
+    artifactError: null,
+    configValidation: null,
+    mergeConfidence: null,
+    minimumReleaseAge: null,
+  },
+  customManagers: [
+    // rust-toolchain.toml channel: no native manager exists.
+    {
+      customType: 'regex',
+      managerFilePatterns: ['/^rust-toolchain\\.toml$/'],
+      matchStrings: ['channel\\s*=\\s*"(?<currentValue>[^"]+)"'],
+      depNameTemplate: 'rust',
+      packageNameTemplate: 'rust-lang/rust',
+      datasourceTemplate: 'github-releases',
+    },
+    // Annotated pins anywhere (Dockerfile pnpm install, etc.):
+    //   # renovate: datasource=<ds> depName=<name> [extractVersion=<re>]
+    //   <anything>@1.2.3   or   COPY --from=ghcr.io/x/y:1.2.3
+    {
+      customType: 'regex',
+      managerFilePatterns: ['/(^|/)Dockerfile$/'],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)( extractVersion=(?<extractVersion>[^\\s]+))?\\s*\\n[^\\n]*?[@:](?<currentValue>\\d[^\\s"]*)',
+      ],
+    },
+  ],
+  // --- project-specific rules below this line --------------------------------
+}

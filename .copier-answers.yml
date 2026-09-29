@@ -1,0 +1,11 @@
+# Recorded by Copier at generation time; `copier update` reads this to know
+# which template version and answers this project came from. Never edit by hand.
+_commit: v0.16.0
+_src_path: git@github.com:erik-sn/bootstrap.git
+description: Creating simple machines
+github_owner: github.com/erik-sn/simple-machines
+include_backend: false
+include_frontend: true
+include_rust: false
+project_name: Simple Machines
+project_slug: simple-machines

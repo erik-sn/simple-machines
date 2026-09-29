@@ -1,0 +1,51 @@
+# template-managed (bootstrap): do not edit. Delete this line to take ownership.
+#
+# Promotion by digest (ADR 0009): a git tag retags the ALREADY-BUILT image for
+# the tagged commit - a pure registry metadata operation, never a rebuild.
+#   v1.4.0-beta.1  ->  <image>:1.4.0-beta.1  + moving `beta` pointer
+#   v1.4.0         ->  <image>:1.4.0         + moving `latest` pointer
+# The fleet repo pins tag@digest, so moving pointers are human conveniences
+# only. If no sha- image exists for the tagged commit the job fails loudly;
+# silently rebuilding would break "tested digest == shipped digest".
+name: Promote release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
+      - name: Promote existing digests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          slug=$(jq -r .slug project.json)
+          registry=$(jq -r .registry project.json)
+          version="${GITHUB_REF_NAME#v}"
+          sha_tag="sha-$(git rev-parse --short=12 HEAD)"
+          case "$version" in
+            *-*) pointer="beta" ;;
+            *) pointer="latest" ;;
+          esac
+          for component in backend frontend; do
+            if [ -d "$component" ]; then
+              image="$registry/$slug-$component"
+              digest=$(crane digest "$image:$sha_tag") || {
+                echo "::error::$image:$sha_tag not found - was the publish run for this commit skipped?"
+                exit 1
+              }
+              crane tag "$image@$digest" "$version"
+              crane tag "$image@$digest" "$pointer"
+              echo "$image: $digest -> $version, $pointer"
+            fi
+          done

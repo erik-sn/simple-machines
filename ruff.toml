@@ -1,0 +1,86 @@
+# template-managed (bootstrap): do not edit; per-member overrides belong in the
+# member pyproject. Delete this line to take ownership.
+# Rules live here, not in AGENTS.md prose: an enforced rule cannot rot.
+line-length = 100
+target-version = "py314"
+# First-party detection for every workspace member, so a new Django app sorts as
+# first-party without a config edit.
+src = [".", "backend", "scripts"]
+# Excludes hold even for paths named explicitly (the pre-commit hook passes
+# staged files), so generated migrations are never linted by accident.
+force-exclude = true
+
+[lint]
+# Django-generated files are formatted but not held to lint rules.
+exclude = ["**/migrations/*"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade: prefer modern syntax
+    "B",   # bugbear: likely bugs
+    "C4",  # comprehension correctness
+    "SIM", # simplifiable code
+    "RUF", # ruff-native correctness rules
+    "DJ",  # flake8-django: nullable string fields, missing __str__, model body order
+    "DTZ", # flake8-datetimez: naive datetimes
+    "G",   # flake8-logging-format: no f-strings or % formatting inside logging calls
+    "LOG", # flake8-logging: logger misuse
+    "T20", # flake8-print: print belongs to scripts and CLI tools only
+    "PT",  # flake8-pytest-style: fixtures, parametrize, raises
+    "C90", # mccabe: a function above complexity 10 wants splitting
+    "PLR0912", # pylint: too many branches
+    "PLR0915", # pylint: too many statements
+    "PLR2004", # pylint: magic value comparison, name the constant (tests exempt)
+    "ERA", # eradicate: commented-out code is deleted, not kept
+    "PGH", # pygrep-hooks: no blanket noqa or type: ignore
+    "TID", # tidy imports: banned APIs below, no relative imports
+    "INP", # implicit namespace packages: every package has an __init__.py
+    "TRY002", # tryceratops: no bare Exception raised
+    "TRY201", # tryceratops: re-raise with bare raise
+    "TRY400", # tryceratops: logger.exception, not logger.error, in except blocks
+    "TRY401", # tryceratops: no redundant exception object in the log message
+    "S",   # bandit: security smells (tests exempt from assert and password literals)
+    "PERF", # perflint: needless copies and loops
+    "FURB", # refurb: modern idioms
+    "PIE", # flake8-pie: misc lints (unnecessary pass, duplicate class fields)
+    "RSE", # flake8-raise: no parentheses on exception classes without arguments
+    "D",   # pydocstyle: docstrings that exist are well formed (google convention)
+    "ANN401", # no explicit Any in signatures; the ORM's Any-typed generics stay
+]
+# Docstrings state intent where it is not obvious; their presence is not enforced.
+ignore = ["D1"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+"django.contrib.auth.models.User".msg = "Use core.models.User (AUTH_USER_MODEL)."
+"django.db.models.signals".msg = "Signals only in <app>/signals.py, connected in AppConfig.ready()."
+"django.dispatch".msg = "Signals only in <app>/signals.py, connected in AppConfig.ready()."
+"django.tasks".msg = "Background work is Celery (config/celery.py)."
+"freezegun".msg = "Use time_machine."
+"os.environ".msg = "Use core.env (require_env, optional_env)."
+"time.sleep".msg = "Never in tests; core/cache.py holds the one sanctioned sleep."
+
+[lint.per-file-ignores]
+# Scripts and CLI tools talk through print by design and read the environment
+# themselves; they are not packages.
+"scripts/**" = ["T20", "INP001", "TID251"]
+"tools/**" = ["T20", "INP001", "TID251"]
+# The one place os.environ is read.
+"**/core/env.py" = ["TID251"]
+# The one place signals are connected.
+"**/signals.py" = ["TID251"]
+# Entry points at the backend root, not packages.
+"**/manage.py" = ["INP001"]
+"**/gunicorn.conf.py" = ["INP001"]
+# Tests assert, compare against literal status codes, and use test passwords.
+"**/tests/**" = ["PLR2004", "S101", "S105", "S106"]
