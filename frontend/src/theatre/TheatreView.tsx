@@ -51,11 +51,12 @@ const ROPE_HANG = 0.6;
 
 interface Props {
   settings: SettingValues;
+  paused: boolean;
 }
 
 // The Theatre of Machines: the bench on the left offers the machines, the
 // visitor places them, joins their ports, and the one shared world runs.
-export function TheatreView({ settings }: Props) {
+export function TheatreView({ settings, paused }: Props) {
   const { composition, ready, error, update } = useComposition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { theme } = useTheme();
@@ -128,6 +129,7 @@ export function TheatreView({ settings }: Props) {
           selectedId={selectedId}
           onSelect={setSelectedId}
           onChange={update}
+          paused={paused}
         />
       </ErrorBoundary>
       <nav aria-label="Bench" className="bench absolute">
@@ -212,6 +214,7 @@ interface BenchProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onChange: (next: Composition) => void;
+  paused: boolean;
 }
 
 interface Size {
@@ -232,6 +235,7 @@ function Bench({
   selectedId,
   onSelect,
   onChange,
+  paused,
 }: BenchProps) {
   const [controller] = useState(
     () => new TheatreController(composition, gravity),
@@ -267,6 +271,10 @@ function Bench({
     controller.start();
     return () => controller.dispose();
   }, [controller]);
+
+  useLayoutEffect(() => {
+    controller.setPaused(paused);
+  }, [controller, paused]);
 
   useEffect(() => {
     if (note === null) {

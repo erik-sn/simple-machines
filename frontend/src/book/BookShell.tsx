@@ -48,6 +48,7 @@ export function BookShell({ chapter, position }: Props) {
     setValues(defaultValues(specs));
   }
   const [panel, setPanel] = useState<"none" | "settings" | "about">("none");
+  const [paused, setPaused] = useState(false);
   const [settingsSeen, setSettingsSeen] = useState(
     () => readStorage(SETTINGS_SEEN_KEY) === "true",
   );
@@ -76,7 +77,12 @@ export function BookShell({ chapter, position }: Props) {
     <ExtraSettingsProvider>
       <div className="relative h-full w-full overflow-hidden">
         <Paper />
-        <Scene scene={stage.scene} mode={stage.mode} settings={values} />
+        <Scene
+          scene={stage.scene}
+          mode={stage.mode}
+          settings={values}
+          paused={paused}
+        />
         <NavArrows previous={previousPath} />
         <Caption
           chapter={chapter}
@@ -99,6 +105,8 @@ export function BookShell({ chapter, position }: Props) {
             setValues((current) => ({ ...current, [key]: value }))
           }
           onReset={() => setValues(defaultValues(specs))}
+          paused={paused}
+          onTogglePaused={() => setPaused((current) => !current)}
         />
         <AboutPanel open={panel === "about"} onClose={() => setPanel("none")} />
       </div>

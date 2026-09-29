@@ -11,6 +11,8 @@ interface Props {
   values: SettingValues;
   onChange: (key: string, value: number) => void;
   onReset: () => void;
+  paused: boolean;
+  onTogglePaused: () => void;
 }
 
 // A non-modal panel: the reader tunes a slider while the scene keeps moving.
@@ -21,6 +23,8 @@ export function SettingsPanel({
   values,
   onChange,
   onReset,
+  paused,
+  onTogglePaused,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const headingId = useId();
@@ -103,6 +107,10 @@ export function SettingsPanel({
           ))}
         </div>
       </fieldset>
+      <label className="font-body mt-4 flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={paused} onChange={onTogglePaused} />
+        Hold the machines still
+      </label>
       {specs.length > 0 && (
         <div className="mt-4 space-y-3">
           {specs.map((spec) => (

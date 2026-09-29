@@ -153,6 +153,11 @@ export class SceneController {
     this.loop.start();
   }
 
+  // The reader's global switch: the drawings hold still.
+  setPaused(paused: boolean): void {
+    this.loop.paused = paused;
+  }
+
   dispose(): void {
     this.loop.stop();
     this.hand.release();
@@ -177,7 +182,6 @@ export class SceneController {
       return false;
     }
     this.readerHolding = true;
-    this.loop.paused = false;
     if (!this.grabbedOnce) {
       this.grabbedOnce = true;
       this.onFirstGrab?.();

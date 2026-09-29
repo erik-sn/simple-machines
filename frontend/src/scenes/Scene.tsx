@@ -8,14 +8,15 @@ interface Props {
   scene: SceneRef;
   mode: StageMode;
   settings: SettingValues;
+  paused: boolean;
 }
 
 // Picks the scene definition for a stage. The key remounts the view whenever
 // the machine, its settings, or the mode change, so a scene is always built
 // fresh from data (a reset is a rebuild, never an in-place undo).
-export function Scene({ scene, mode, settings }: Props) {
+export function Scene({ scene, mode, settings, paused }: Props) {
   if (scene.kind === "theatre") {
-    return <TheatreView settings={settings} />;
+    return <TheatreView settings={settings} paused={paused} />;
   }
   const definition = sceneFor(scene.kind);
   if (definition === undefined) {
@@ -35,6 +36,7 @@ export function Scene({ scene, mode, settings }: Props) {
       scene={scene}
       mode={mode}
       settings={settings}
+      paused={paused}
     />
   );
 }

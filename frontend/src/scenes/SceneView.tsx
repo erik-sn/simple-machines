@@ -12,6 +12,7 @@ interface Props {
   scene: SceneRef;
   mode: StageMode;
   settings: SettingValues;
+  paused: boolean;
 }
 
 const REVEAL_MS = 900;
@@ -24,7 +25,13 @@ interface Size {
 // The illustration: one SVG in world metres (y up), static ink, a group per
 // body whose transform the controller writes each frame, ropes, and the hint.
 // Remount it (key) to change the machine, the settings, or the mode.
-export function SceneView({ definition, scene, mode, settings }: Props) {
+export function SceneView({
+  definition,
+  scene,
+  mode,
+  settings,
+  paused,
+}: Props) {
   const [controller] = useState(
     () => new SceneController(definition, settings, scene.variant, mode),
   );
@@ -51,6 +58,10 @@ export function SceneView({ definition, scene, mode, settings }: Props) {
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    controller.setPaused(paused);
+  }, [controller, paused]);
 
   useLayoutEffect(() => {
     controller.listenFirstGrab(() => setHintVisible(false));

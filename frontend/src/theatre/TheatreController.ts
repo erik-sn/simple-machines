@@ -1,6 +1,7 @@
 import { type Body, RevoluteJoint, RopeJoint, Vec2, World } from "planck";
 import { Hand } from "../physics/hand";
 import { DT, Loop } from "../physics/loop";
+import { ForceSampler } from "../physics/sampler";
 import type {
   Machine,
   Part,
@@ -69,8 +70,13 @@ export class TheatreController {
   private readonly ropeElements = new Map<string, SVGPathElement>();
   private readonly ownerOfPart = new Map<Part, NodeInstance>();
   private lastHeld: NodeInstance | null = null;
+  private readonly effortSampler = new ForceSampler();
+  private readonly gravity: number;
+  private readonly composition: Composition;
 
   constructor(composition: Composition, gravity: number) {
+    this.gravity = gravity;
+    this.composition = composition;
     this.world = new World({ gravity: { x: 0, y: -gravity } });
     this.page = this.world.createBody();
     const instances: NodeInstance[] = [];
@@ -221,6 +227,71 @@ export class TheatreController {
     this.loop.start();
   }
 
+  setPaused(paused: boolean): void {
+    this.loop.paused = paused;
+  }
+
+  // Every machine joined, directly or through others, to the given one.
+  private componentOf(nodeId: string): Set<string> {
+    const seen = new Set<string>([nodeId]);
+    const queue = [nodeId];
+    while (queue.length > 0) {
+      const current = queue.pop() as string;
+      for (const link of this.composition.links) {
+        const other =
+          link.a.node === current
+            ? link.b.node
+            : link.b.node === current
+              ? link.a.node
+              : null;
+        if (other !== null && !seen.has(other)) {
+          seen.add(other);
+          queue.push(other);
+        }
+      }
+    }
+    return seen;
+  }
+
+  // The compound's readouts: the effort at the reader's hand against every
+  // weight hanging on the chain it belongs to, which is what the Theatre is
+  // for: advantages multiply through the stages.
+  private compoundReadouts(): { label: string; value: string }[] {
+    const held = this.hand.part;
+    const owner = held === null ? null : (this.ownerOfPart.get(held) ?? null);
+    if (owner === null) {
+      return [];
+    }
+    const component = this.componentOf(owner.node.id);
+    let loads = 0;
+    for (const instance of this.instances) {
+      if (
+        instance.node.kind === "weight" &&
+        component.has(instance.node.id) &&
+        instance !== owner
+      ) {
+        loads += (instance.values.mass ?? 0) * this.gravity;
+      }
+    }
+    const effort = this.effortSampler.mean();
+    const readouts = [
+      { label: "Effort", value: `${effort.toFixed(effort < 10 ? 1 : 0)} N` },
+    ];
+    if (loads > 0) {
+      readouts.push({
+        label: "Loads on the chain",
+        value: `${loads.toFixed(0)} N`,
+      });
+      const speed = held === null ? 0 : held.body.getLinearVelocity().length();
+      readouts.push({
+        label: "Advantage",
+        value:
+          effort > 0.5 && speed < 0.15 ? (loads / effort).toFixed(1) : "moving",
+      });
+    }
+    return readouts;
+  }
+
   dispose(): void {
     this.loop.stop();
     this.hand.release();
@@ -255,8 +326,16 @@ export class TheatreController {
         handIsReader: this.hand.part !== null,
       });
     }
+    if (this.hand.part !== null) {
+      this.effortSampler.push(Math.hypot(handForce.x, handForce.y));
+    } else {
+      this.effortSampler.clear();
+    }
     if (step % READOUT_EVERY === 0) {
-      this.readouts.publish(this.lastHeld?.machine.readouts() ?? []);
+      const own = (this.lastHeld?.machine.readouts() ?? []).filter(
+        (r) => r.label !== "Effort" && r.label !== "Advantage",
+      );
+      this.readouts.publish([...own, ...this.compoundReadouts()]);
     }
   }
 
