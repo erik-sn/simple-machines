@@ -21,7 +21,12 @@ for (const [path, module] of Object.entries(modules)) {
 
 export function sceneFor(kind: SceneKind): SceneDefinition | undefined {
   if (kind === "frontispiece") {
-    return byKind.get("lever");
+    const lever = byKind.get("lever");
+    if (lever === undefined) {
+      return undefined;
+    }
+    // The title page carries the title at the head and the plate below.
+    return { ...lever, camera: { ...lever.camera, y: 0.5 } };
   }
   if (kind === "theatre") {
     return undefined;

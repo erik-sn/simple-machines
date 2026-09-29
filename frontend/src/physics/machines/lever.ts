@@ -15,11 +15,13 @@ import type {
 // (docs/research/physics.md, "Lever"). The three classes are presets of where
 // the fulcrum, load, and effort sit along the bar.
 
-const BAR_HALF_THICKNESS = 0.03;
+const BAR_HALF_THICKNESS = 0.045;
+const SHADOW_BAND = 0.03;
 const BAR_DENSITY = 4;
 const ROPE_LENGTH = 0.5;
 const WEIGHT_HALF = 0.16;
 const TILT_LIMIT = 0.45;
+const TILT_LIMIT_CLASS3 = 0.25;
 
 interface Layout {
   // Fractions of the bar length from its left end.
@@ -96,7 +98,7 @@ function formatNewtons(value: number): string {
 
 export const leverScene: SceneDefinition = {
   settings: LEVER_SETTINGS,
-  camera: { x: 0, y: -0.2, height: 4, width: 4.6 },
+  camera: { x: 0, y: -0.9, height: 4.4, width: 3.6 },
   build(world, page, values, variant, context) {
     const length = values.length ?? 3;
     const loadMass = values.load ?? 5;
@@ -126,8 +128,8 @@ export const leverScene: SceneDefinition = {
           motorSpeed: 0,
           maxMotorTorque: pinFriction,
           enableLimit: true,
-          lowerAngle: -TILT_LIMIT,
-          upperAngle: TILT_LIMIT,
+          lowerAngle: -(variant === "class3" ? TILT_LIMIT_CLASS3 : TILT_LIMIT),
+          upperAngle: variant === "class3" ? TILT_LIMIT_CLASS3 : TILT_LIMIT,
         },
         page,
         bar,
@@ -177,10 +179,21 @@ export const leverScene: SceneDefinition = {
             { x: -length / 2, y: BAR_HALF_THICKNESS },
           ],
           closed: true,
-          fill: true,
         },
-        // The pin, drawn on the bar so it stays centred on the joint.
-        { kind: "circle", center: { x: xFulcrum, y: 0 }, radius: 0.045 },
+        // An engraver hatches the shadow side only: a band along the underside.
+        {
+          kind: "polygon",
+          points: [
+            { x: -length / 2, y: -BAR_HALF_THICKNESS },
+            { x: length / 2, y: -BAR_HALF_THICKNESS },
+            { x: length / 2, y: -BAR_HALF_THICKNESS + SHADOW_BAND },
+            { x: -length / 2, y: -BAR_HALF_THICKNESS + SHADOW_BAND },
+          ],
+          closed: true,
+          fill: true,
+          outline: false,
+          hatch: { angle: 60 },
+        },
       ],
       grab: { hintAt: { x: xEffort, y: 0 } },
     };
@@ -191,6 +204,8 @@ export const leverScene: SceneDefinition = {
             id: "weight",
             body: weight,
             shapes: [
+              // A block seen a little from above and the right: front, top,
+              // and a hatched right face, as a plate would draw it.
               {
                 kind: "polygon",
                 points: [
@@ -200,36 +215,110 @@ export const leverScene: SceneDefinition = {
                   { x: -WEIGHT_HALF, y: WEIGHT_HALF },
                 ],
                 closed: true,
-                fill: true,
               },
-              // A ring on top for the rope.
               {
-                kind: "arc",
-                center: { x: 0, y: WEIGHT_HALF },
+                kind: "polygon",
+                points: [
+                  { x: -WEIGHT_HALF, y: WEIGHT_HALF },
+                  { x: -WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
+                  { x: WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
+                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
+                ],
+                closed: true,
+              },
+              {
+                kind: "polygon",
+                points: [
+                  { x: WEIGHT_HALF, y: -WEIGHT_HALF },
+                  { x: WEIGHT_HALF + 0.07, y: -WEIGHT_HALF + 0.05 },
+                  { x: WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
+                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
+                ],
+                closed: true,
+                fill: true,
+                hatch: { angle: 70 },
+              },
+              // A ring on top that the rope ties into.
+              {
+                kind: "circle",
+                center: { x: 0.035, y: WEIGHT_HALF + 0.05 },
                 radius: 0.05,
-                start: 0,
-                end: Math.PI,
                 stroke: "soft",
               },
             ],
           };
 
-    const fulcrumStand: Shape = {
-      kind: "polygon",
-      points: [
-        { x: origin.x + xFulcrum - 0.22, y: origin.y - 0.5 },
-        { x: origin.x + xFulcrum + 0.22, y: origin.y - 0.5 },
-        { x: origin.x + xFulcrum, y: origin.y - 0.04 },
-      ],
-      closed: true,
-      fill: true,
-    };
-    const baseLine: Shape = {
-      kind: "segment",
-      from: { x: origin.x + xFulcrum - 0.35, y: origin.y - 0.5 },
-      to: { x: origin.x + xFulcrum + 0.35, y: origin.y - 0.5 },
-      stroke: "soft",
-    };
+    // A post on a plinth carries the pin, as the plates draw it; the textbook
+    // triangle is a modern glyph. Shadow bands hatch the right face of the
+    // post and the underside of the plinth.
+    const ox = origin.x + xFulcrum;
+    const oy = origin.y;
+    const statics: Shape[] = [
+      {
+        kind: "polygon",
+        points: [
+          { x: ox - 0.06, y: oy - 0.5 },
+          { x: ox + 0.06, y: oy - 0.5 },
+          { x: ox + 0.06, y: oy - 0.035 },
+          { x: ox - 0.06, y: oy - 0.035 },
+        ],
+        closed: true,
+      },
+      {
+        kind: "polygon",
+        points: [
+          { x: ox + 0.025, y: oy - 0.5 },
+          { x: ox + 0.06, y: oy - 0.5 },
+          { x: ox + 0.06, y: oy - 0.035 },
+          { x: ox + 0.025, y: oy - 0.035 },
+        ],
+        closed: true,
+        fill: true,
+        outline: false,
+        hatch: { angle: 65 },
+      },
+      {
+        kind: "polygon",
+        points: [
+          { x: ox - 0.32, y: oy - 0.5 },
+          { x: ox + 0.32, y: oy - 0.5 },
+          { x: ox + 0.32, y: oy - 0.56 },
+          { x: ox - 0.32, y: oy - 0.56 },
+        ],
+        closed: true,
+      },
+      {
+        kind: "polygon",
+        points: [
+          { x: ox - 0.32, y: oy - 0.535 },
+          { x: ox + 0.32, y: oy - 0.535 },
+          { x: ox + 0.32, y: oy - 0.56 },
+          { x: ox - 0.32, y: oy - 0.56 },
+        ],
+        closed: true,
+        fill: true,
+        outline: false,
+        hatch: { angle: 60 },
+      },
+      // The pin: a round-headed bolt, the cleanest mark on the plate.
+      { kind: "circle", center: { x: ox, y: oy }, radius: 0.04 },
+      { kind: "circle", center: { x: ox, y: oy }, radius: 0.012 },
+      // Centre lines through the pivot; the technical themes dash them.
+      {
+        kind: "segment",
+        from: { x: ox - 0.35, y: oy },
+        to: { x: ox + 0.35, y: oy },
+        stroke: "faint",
+        dash: "center",
+      },
+      {
+        kind: "segment",
+        from: { x: ox, y: oy - 0.35 },
+        to: { x: ox, y: oy + 0.35 },
+        stroke: "faint",
+        dash: "center",
+      },
+    ];
 
     const effortSampler = new ForceSampler();
     let effortNow = 0;
@@ -242,7 +331,7 @@ export const leverScene: SceneDefinition = {
       if (weight === null) {
         return ropeFrom();
       }
-      const p = weight.getWorldPoint(new Vec2(0, WEIGHT_HALF + 0.05));
+      const p = weight.getWorldPoint(new Vec2(0.035, WEIGHT_HALF + 0.1));
       return { x: p.x, y: p.y };
     };
 
@@ -252,7 +341,7 @@ export const leverScene: SceneDefinition = {
         weight === null
           ? []
           : [{ id: "rope", strands: () => [[ropeFrom(), ropeTo()]] }],
-      statics: [fulcrumStand, baseLine],
+      statics,
       ports: [
         {
           id: "load-end",
@@ -277,7 +366,7 @@ export const leverScene: SceneDefinition = {
         },
       ],
       step(context) {
-        if (context.handPart === barPart) {
+        if (context.handPart === barPart && context.handIsReader) {
           // Effort is the hand's force across the bar, the part that turns it.
           const along = bar.getWorldVector(new Vec2(1, 0));
           const across =

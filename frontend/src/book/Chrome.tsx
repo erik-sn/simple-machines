@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { MANICULE_PATH } from "../ink/render";
 import { GearIcon } from "./GearIcon";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 export function Chrome({ showHint, onOpenSettings, onOpenAbout }: Props) {
   const hintId = useId();
   return (
-    <div className="absolute top-4 right-4 flex items-center gap-4">
+    <div className="chrome absolute flex items-center gap-4">
       <button
         type="button"
         onClick={onOpenAbout}
@@ -36,7 +37,20 @@ export function Chrome({ showHint, onOpenSettings, onOpenAbout }: Props) {
             role="tooltip"
             className="gear-note font-body text-ink-faint text-step--1 absolute top-full right-0 mt-1 w-48 text-right italic leading-snug"
           >
-            <span aria-hidden="true">☞ </span>
+            <svg
+              viewBox="0 0 40 28"
+              width="18"
+              height="13"
+              aria-hidden="true"
+              className="mr-1 inline-block"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            >
+              <path d={MANICULE_PATH} />
+            </svg>
             the paper and the physics are tuned here
           </p>
         )}

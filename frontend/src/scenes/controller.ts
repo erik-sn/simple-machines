@@ -257,7 +257,7 @@ export class SceneController {
         // Finger up, tip just under the point the hand may take.
         hint.setAttribute(
           "transform",
-          `translate(${(at.x - 0.108).toFixed(4)} ${(at.y - 0.52).toFixed(4)}) rotate(90) scale(0.012 -0.012)`,
+          `translate(${(at.x - 0.081).toFixed(4)} ${(at.y - 0.4).toFixed(4)}) rotate(90) scale(0.009 -0.009)`,
         );
       }
     }

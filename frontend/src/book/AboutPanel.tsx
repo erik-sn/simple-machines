@@ -37,7 +37,7 @@ export function AboutPanel({ open, onClose }: Props) {
       <div className="flex items-baseline justify-between">
         <h2
           id={headingId}
-          className="font-display text-sm uppercase tracking-widest"
+          className="font-display text-sm lowercase tracking-widest"
         >
           About
         </h2>
@@ -58,7 +58,7 @@ export function AboutPanel({ open, onClose }: Props) {
         no machine works for free, was written down by Galileo around 1600; the
         Theatre at the end lets you chain the six and watch it hold.
       </p>
-      <h3 className="font-display text-ink-soft mt-6 text-xs uppercase tracking-widest">
+      <h3 className="font-display text-ink-soft mt-6 text-xs lowercase tracking-widest">
         Contents
       </h3>
       <ol className="font-body mt-2 space-y-1">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { paperRaster } from "./paper";
+import { paperRaster, paperTile } from "./paper";
 import { useTheme } from "./ThemeProvider";
 
 interface Size {
@@ -42,6 +42,27 @@ export function Paper() {
     };
   }, []);
 
+  // Panels and dialogs wear a small tile of the same sheet.
+  useEffect(() => {
+    let cancelled = false;
+    paperTile(theme).then(
+      (url) => {
+        if (!cancelled) {
+          document.documentElement.style.setProperty(
+            "--paper-tile",
+            `url(${url})`,
+          );
+        }
+      },
+      (error: unknown) => {
+        throw error;
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [theme]);
+
   useEffect(() => {
     if (size === null || size.width === 0 || size.height === 0) {
       return;
@@ -83,6 +104,7 @@ export function Paper() {
         className="paper-raster absolute inset-0 h-full w-full"
         data-ready={ready ? "" : undefined}
       />
+      <div className="paper-scan absolute inset-0" />
     </div>
   );
 }

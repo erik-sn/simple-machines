@@ -40,6 +40,23 @@ export interface Composition {
 
 export const EMPTY_COMPOSITION: Composition = { v: 1, nodes: [], links: [] };
 
+// What the bench shows when nobody has built anything yet: a lever with a
+// weight hung from its load end, so the page opens on a working plate.
+export const SEED_COMPOSITION: Composition = {
+  v: 1,
+  nodes: [
+    { id: "le1", kind: "lever", x: 0, y: 0.6, settings: {} },
+    { id: "we1", kind: "weight", x: -1.35, y: -0.255, settings: {} },
+  ],
+  links: [
+    {
+      a: { node: "we1", port: "rope-end" },
+      b: { node: "le1", port: "load-hook" },
+      joint: "rope",
+    },
+  ],
+};
+
 export const THEATRE_KINDS: readonly TheatreKind[] = [
   "lever",
   "wheel-and-axle",
@@ -212,7 +229,7 @@ export async function encodeComposition(
 export async function decodeComposition(hash: string): Promise<Composition> {
   const text = hash.replace(/^#/, "");
   if (text === "") {
-    return EMPTY_COMPOSITION;
+    return SEED_COMPOSITION;
   }
   if (!text.startsWith("c=")) {
     throw new Error("This address does not describe a bench.");

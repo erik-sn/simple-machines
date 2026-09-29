@@ -54,7 +54,7 @@ export function SettingsPanel({
       <div className="flex items-baseline justify-between">
         <h2
           id={headingId}
-          className="font-display text-sm uppercase tracking-widest"
+          className="font-display text-sm lowercase tracking-widest"
         >
           Settings
         </h2>
@@ -116,7 +116,7 @@ export function SettingsPanel({
           <button
             type="button"
             onClick={onReset}
-            className="font-display text-ink-soft hover:text-ink text-xs uppercase tracking-widest"
+            className="font-display text-ink-soft hover:text-ink text-xs lowercase tracking-widest"
           >
             Reset
           </button>
@@ -124,7 +124,7 @@ export function SettingsPanel({
       )}
       {section !== null && (
         <div className="mt-5 space-y-3 border-ink-faint border-t pt-4">
-          <h3 className="font-display text-ink-soft text-xs uppercase tracking-widest">
+          <h3 className="font-display text-ink-soft text-xs lowercase tracking-widest">
             {section.title}
           </h3>
           {section.specs.map((spec) => (
@@ -162,7 +162,7 @@ export function SettingsPanel({
           <button
             type="button"
             onClick={section.onRemove}
-            className="font-display text-ink-soft hover:text-ink text-xs uppercase tracking-widest"
+            className="font-display text-ink-soft hover:text-ink text-xs lowercase tracking-widest"
           >
             Remove it from the bench
           </button>

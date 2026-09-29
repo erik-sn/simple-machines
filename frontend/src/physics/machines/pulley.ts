@@ -40,6 +40,8 @@ const HANDLE_HALF_HEIGHT = 0.03;
 const HANDLE_MASS = 1;
 const BLOCK_MASS = 0.3;
 const BEAM_HEIGHT = 0.1;
+// An engraver hatches only the shadow side: a band this wide.
+const SHADOW_BAND = 0.03;
 const FIXED_ROW_Y = 1;
 const CLEARANCE = 0.1;
 // Guide travel on the slack side: the load may sink this far (over n) below
@@ -352,7 +354,13 @@ function shellShapes(
         ];
   return [
     { kind: "polygon", points: chamfered(e, c), closed: true },
-    { kind: "polygon", points: cap, closed: true, fill: true },
+    {
+      kind: "polygon",
+      points: cap,
+      closed: true,
+      fill: true,
+      hatch: { angle: 60 },
+    },
   ];
 }
 
@@ -429,28 +437,50 @@ function thimble(at: Vec): Shape {
   return { kind: "circle", center: at, radius: 0.03, stroke: "soft" };
 }
 
-// A hatched weight whose ring links through an eye centred at eyeY.
+// The lever's weight: a block seen a little from above and the right, front,
+// top, and a hatched right face, its ring linked through an eye centred at
+// eyeY.
 function weightShapes(eyeY: number): Shape[] {
   const ringY = eyeY - RING_RADIUS;
-  const cy = ringY - WEIGHT_HALF;
+  const top = ringY - 0.05;
+  const bottom = top - 2 * WEIGHT_HALF;
   return [
     {
       kind: "polygon",
       points: [
-        { x: -WEIGHT_HALF, y: cy - WEIGHT_HALF },
-        { x: WEIGHT_HALF, y: cy - WEIGHT_HALF },
-        { x: WEIGHT_HALF, y: cy + WEIGHT_HALF },
-        { x: -WEIGHT_HALF, y: cy + WEIGHT_HALF },
+        { x: -WEIGHT_HALF, y: bottom },
+        { x: WEIGHT_HALF, y: bottom },
+        { x: WEIGHT_HALF, y: top },
+        { x: -WEIGHT_HALF, y: top },
+      ],
+      closed: true,
+    },
+    {
+      kind: "polygon",
+      points: [
+        { x: -WEIGHT_HALF, y: top },
+        { x: -WEIGHT_HALF + 0.07, y: top + 0.05 },
+        { x: WEIGHT_HALF + 0.07, y: top + 0.05 },
+        { x: WEIGHT_HALF, y: top },
+      ],
+      closed: true,
+    },
+    {
+      kind: "polygon",
+      points: [
+        { x: WEIGHT_HALF, y: bottom },
+        { x: WEIGHT_HALF + 0.07, y: bottom + 0.05 },
+        { x: WEIGHT_HALF + 0.07, y: top + 0.05 },
+        { x: WEIGHT_HALF, y: top },
       ],
       closed: true,
       fill: true,
+      hatch: { angle: 70 },
     },
     {
-      kind: "arc",
-      center: { x: 0, y: ringY },
+      kind: "circle",
+      center: { x: 0.035, y: ringY },
       radius: RING_RADIUS,
-      start: 0,
-      end: Math.PI,
       stroke: "soft",
     },
   ];
@@ -554,9 +584,9 @@ export const pulleyScene: SceneDefinition = {
     }
     const eyeY = eyeBelow(hookAttachY, blockShapes);
     if (context.standalone) {
-      const ringY = eyeY - RING_RADIUS;
+      const weightTop = eyeY - RING_RADIUS - 0.05;
       block.createFixture(
-        new Box(WEIGHT_HALF, WEIGHT_HALF, new Vec2(0, ringY - WEIGHT_HALF)),
+        new Box(WEIGHT_HALF, WEIGHT_HALF, new Vec2(0, weightTop - WEIGHT_HALF)),
         { density: loadMass / (4 * WEIGHT_HALF * WEIGHT_HALF) },
       );
       blockShapes.push(...weightShapes(eyeY));
@@ -688,6 +718,7 @@ export const pulleyScene: SceneDefinition = {
           ),
           closed: true,
           fill: true,
+          hatch: { angle: 60 },
         },
         // The knot that ties the rope to the toggle.
         {
@@ -713,23 +744,29 @@ export const pulleyScene: SceneDefinition = {
       return { spec, body, part, dx: spec.x - layout.blockX };
     });
 
-    const beam: Shape = {
-      kind: "polygon",
-      points: [
-        { x: origin.x - layout.beamHalfWidth, y: origin.y + layout.beamBottom },
-        { x: origin.x + layout.beamHalfWidth, y: origin.y + layout.beamBottom },
-        {
-          x: origin.x + layout.beamHalfWidth,
-          y: origin.y + layout.beamBottom + BEAM_HEIGHT,
-        },
-        {
-          x: origin.x - layout.beamHalfWidth,
-          y: origin.y + layout.beamBottom + BEAM_HEIGHT,
-        },
-      ],
-      closed: true,
-      fill: true,
-    };
+    const beamBox = (height: number): Vec[] => [
+      { x: origin.x - layout.beamHalfWidth, y: origin.y + layout.beamBottom },
+      { x: origin.x + layout.beamHalfWidth, y: origin.y + layout.beamBottom },
+      {
+        x: origin.x + layout.beamHalfWidth,
+        y: origin.y + layout.beamBottom + height,
+      },
+      {
+        x: origin.x - layout.beamHalfWidth,
+        y: origin.y + layout.beamBottom + height,
+      },
+    ];
+    const beam: Shape[] = [
+      { kind: "polygon", points: beamBox(BEAM_HEIGHT), closed: true },
+      {
+        kind: "polygon",
+        points: beamBox(SHADOW_BAND),
+        closed: true,
+        fill: true,
+        outline: false,
+        hatch: { angle: 60 },
+      },
+    ];
     const beamHook = hookShapes(
       origin.x + layout.frameX,
       origin.y + layout.beamBottom,
@@ -776,7 +813,7 @@ export const pulleyScene: SceneDefinition = {
         ...sheaveParts.map((s) => s.part),
       ],
       ropes: [{ id: "rope", strands: () => [ropePoints()] }],
-      statics: [beam, ...beamHook],
+      statics: [...beam, ...beamHook],
       ports: [
         {
           id: "free-end",

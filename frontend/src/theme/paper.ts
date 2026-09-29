@@ -5,11 +5,19 @@ import type { ThemeId } from "./themes";
 // sections 1.3 to 1.6). The SVG travels as a data URL because the nginx CSP
 // allows img-src data: and not blob:.
 
-function fibreFilter(id: string, seed: number, amplitude: number): string {
+// amplitude lights the fibre; mottle is the luminance swing of the slow
+// pulp-density variation (0.045 reads as toning, 0.09 as stock parchment).
+function fibreFilter(
+  id: string,
+  seed: number,
+  amplitude: number,
+  mottle: number,
+): string {
+  const intercept = (1 - mottle * 0.7).toFixed(3);
   return `
     <filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.7 0.45" numOctaves="3" seed="${seed}" stitchTiles="stitch" result="fibre"/>
-      <feDiffuseLighting in="fibre" lighting-color="#ffffff" surfaceScale="${amplitude}" diffuseConstant="1" result="lit">
+      <feDiffuseLighting in="fibre" lighting-color="#ffffff" surfaceScale="${amplitude}" diffuseConstant="1.15" result="lit">
         <feDistantLight azimuth="40" elevation="62"/>
       </feDiffuseLighting>
       <feComponentTransfer in="lit" result="litSoft">
@@ -19,24 +27,28 @@ function fibreFilter(id: string, seed: number, amplitude: number): string {
         <feFuncA type="table" tableValues="1 1"/>
       </feComponentTransfer>
       <feBlend in="SourceGraphic" in2="litSoft" mode="multiply" result="fibrePaper"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="${seed + 3}" result="mottleRaw"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.0045" numOctaves="3" seed="${seed + 3}" result="mottleRaw"/>
       <feColorMatrix in="mottleRaw" type="saturate" values="0" result="mottle"/>
       <feComponentTransfer in="mottle" result="mottleLight">
-        <feFuncR type="linear" slope="0.09" intercept="0.92"/>
-        <feFuncG type="linear" slope="0.09" intercept="0.91"/>
-        <feFuncB type="linear" slope="0.09" intercept="0.89"/>
+        <feFuncR type="linear" slope="${mottle}" intercept="${intercept}"/>
+        <feFuncG type="linear" slope="${mottle}" intercept="${intercept}"/>
+        <feFuncB type="linear" slope="${mottle}" intercept="${(Number(intercept) - 0.02).toFixed(3)}"/>
         <feFuncA type="table" tableValues="1 1"/>
       </feComponentTransfer>
       <feBlend in="fibrePaper" in2="mottleLight" mode="multiply"/>
     </filter>`;
 }
 
+// Foxing: sparse, clustered, soft-edged, favouring nowhere in particular.
 function foxingFilter(id: string, seed: number): string {
   return `
     <filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="${seed}" result="n"/>
-      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.36  0 0 0 0 0.18  0 0 0 9 -7.4" result="spots"/>
-      <feGaussianBlur in="spots" stdDeviation="0.6"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.36  0 0 0 0 0.18  0 0 0 12 -10.3" result="spots"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.004" numOctaves="1" seed="${seed + 7}" result="cluster"/>
+      <feColorMatrix in="cluster" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 5 -2.2" result="clusterMask"/>
+      <feComposite in="spots" in2="clusterMask" operator="in" result="clustered"/>
+      <feGaussianBlur in="clustered" stdDeviation="0.9"/>
     </filter>`;
 }
 
@@ -66,21 +78,21 @@ export function paperMarkup(
   switch (theme) {
     case "ink":
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-        <defs>${fibreFilter("fibre", 11, 1.4)}${foxingFilter("foxing", 19)}</defs>
+        <defs>${fibreFilter("fibre", 11, 1.8, 0.045)}${foxingFilter("foxing", 19)}</defs>
         <rect width="100%" height="100%" fill="#efe6d2" filter="url(#fibre)"/>
-        <rect width="100%" height="100%" filter="url(#foxing)" opacity="0.45"/>
+        <rect width="100%" height="100%" filter="url(#foxing)" opacity="0.32"/>
       </svg>`;
     case "graph":
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-        <defs>${fibreFilter("fibre", 23, 0.5)}${gridPattern(19, 38, "rgb(120 150 200 / 0.28)", "rgb(100 135 195 / 0.55)")}</defs>
+        <defs>${fibreFilter("fibre", 23, 0.5, 0.015)}${gridPattern(19, 38, "rgb(120 150 200 / 0.18)", "rgb(100 135 195 / 0.38)")}</defs>
         <rect width="100%" height="100%" fill="#f6f3ea" filter="url(#fibre)"/>
-        <rect x="0.4" y="0.2" width="100%" height="100%" fill="url(#major)" opacity="0.35" style="filter: hue-rotate(20deg)"/>
+        <rect x="0.3" y="0.15" width="100%" height="100%" fill="url(#major)" opacity="0.2" style="filter: hue-rotate(20deg)"/>
         <rect width="100%" height="100%" fill="url(#major)"/>
         <rect x="38" y="38" width="${w - 76}" height="${h - 76}" fill="none" stroke="rgb(60 80 120 / 0.8)" stroke-width="1.3"/>
       </svg>`;
     case "fusion":
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-        <defs>${fibreFilter("fibre", 31, 1.0)}${gridPattern(19, 38, "rgb(140 120 90 / 0.16)", "rgb(120 100 70 / 0.3)")}</defs>
+        <defs>${fibreFilter("fibre", 31, 1.0, 0.04)}${gridPattern(19, 38, "rgb(140 120 90 / 0.08)", "rgb(120 100 70 / 0.15)")}</defs>
         <rect width="100%" height="100%" fill="#ece4d0" filter="url(#fibre)"/>
         <rect width="100%" height="100%" fill="url(#major)"/>
       </svg>`;
@@ -122,4 +134,10 @@ export function paperRaster(
     cache.set(key, job);
   }
   return job;
+}
+
+// A small tile of the sheet for panels and dialogs, as a data URL.
+export async function paperTile(theme: ThemeId): Promise<string> {
+  const canvas = await paperRaster(theme, 512, 512);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }

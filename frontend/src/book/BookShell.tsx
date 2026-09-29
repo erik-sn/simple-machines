@@ -8,7 +8,7 @@ import { Paper } from "../theme/Paper";
 import { AboutPanel } from "./AboutPanel";
 import { Caption } from "./Caption";
 import { Chrome } from "./Chrome";
-import type { Chapter } from "./chapters";
+import { CHAPTERS, type Chapter } from "./chapters";
 import { ExtraSettingsProvider } from "./extraSettings";
 import { NavArrows } from "./NavArrows";
 import {
@@ -56,6 +56,11 @@ export function BookShell({ chapter, position }: Props) {
   const next = nextPosition(position);
   const previousPath = previous === null ? null : positionPath(previous);
   const nextPath = next === null ? null : positionPath(next);
+  const nextStage =
+    next === null
+      ? undefined
+      : CHAPTERS[next.chapterIndex]?.stages[next.stageIndex];
+  const catchword = nextStage?.text[0]?.split(/\s+/)[0] ?? null;
   useKeyboardPaging();
   useRecordProgress(positionPath(position));
 
@@ -72,11 +77,13 @@ export function BookShell({ chapter, position }: Props) {
       <div className="relative h-full w-full overflow-hidden">
         <Paper />
         <Scene scene={stage.scene} mode={stage.mode} settings={values} />
-        <NavArrows previous={previousPath} next={nextPath} />
+        <NavArrows previous={previousPath} />
         <Caption
           chapter={chapter}
           stage={stage}
           stageIndex={position.stageIndex}
+          nextPath={nextPath}
+          catchword={catchword}
         />
         <Chrome
           showHint={!settingsSeen}

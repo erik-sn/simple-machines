@@ -25,6 +25,11 @@ test("building on the bench: a weight hung from a lever survives a reload", asyn
     page.getByRole("heading", { name: /Theatre of Machines/ }),
   ).toBeVisible();
   const bench = page.getByRole("img", { name: "The bench" });
+  // The bench opens on a lever with a weight already hung from it.
+  await expect(bench).toHaveAttribute("data-nodes", "2");
+  await expect(bench).toHaveAttribute("data-links", "1");
+  await page.getByRole("button", { name: "clear the bench" }).click();
+  await expect(bench).toHaveAttribute("data-nodes", "0");
 
   await page.getByRole("button", { name: "Lever" }).click();
   await expect(bench).toHaveAttribute("data-nodes", "1");

@@ -79,6 +79,17 @@
   --stroke-hair: 0.8px;
 }
 
+/* Page insets: the graph theme prints a frame and keeps its chrome inside it. */
+:root {
+  --inset-top: 16px;
+  --inset-side: 16px;
+  --foot: calc(7svh + env(safe-area-inset-bottom, 0px));
+}
+:root[data-theme="graph"] {
+  --inset-top: 52px;
+  --inset-side: 52px;
+}
+
 /* Type scale for placard captions (aesthetics.md, 3.4). */
 :root {
   --step-0: clamp(17px, 12px + 1.1vw, 21px);
@@ -86,6 +97,9 @@
   --step-2: calc(var(--step-0) * 1.9);
   --step-3: calc(var(--step-0) * 3.2);
   --step--1: calc(var(--step-0) * 0.78);
+}
+:root[data-theme="graph"] {
+  --step-0: clamp(15px, 11px + 0.9vw, 18px);
 }
 
 html,
@@ -117,6 +131,39 @@ body {
 .paper-raster[data-ready] {
   opacity: 1;
 }
+/* A scanned rag tile at two scales under multiply carries the fibre clumps
+   noise cannot invent (CC0, ambientCG Paper006). */
+.paper-scan {
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+}
+:root[data-theme="ink"] .paper-scan {
+  background:
+    url(/paper/paper006.jpg) 0 0 / 900px,
+    url(/paper/paper006.jpg) 37% 61% / 1400px;
+}
+:root[data-theme="fusion"] .paper-scan {
+  background: url(/paper/paper006.jpg) 0 0 / 1100px;
+}
+:root[data-theme="ink"] .paper:has(.paper-raster[data-ready]) .paper-scan {
+  opacity: 0.55;
+}
+:root[data-theme="fusion"] .paper:has(.paper-raster[data-ready]) .paper-scan {
+  opacity: 0.2;
+}
+/* The ruled and toned layers wait for the raster, so the first paint is the
+   plain sheet rather than a beige page ruled into columns. */
+.paper::before,
+.paper::after {
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+}
+.paper:has(.paper-raster[data-ready])::before,
+.paper:has(.paper-raster[data-ready])::after {
+  opacity: 1;
+}
 :root[data-theme="ink"] .paper::before,
 :root[data-theme="fusion"] .paper::before {
   content: "";
@@ -142,6 +189,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* One gutter and one fore-edge, not two gutters. */
   background:
     radial-gradient(
       120% 90% at 50% 45%,
@@ -150,20 +198,126 @@ body {
     ),
     linear-gradient(
       to right,
-      rgb(92 64 28 / 0.1),
-      transparent 8% 92%,
-      rgb(92 64 28 / 0.1)
+      rgb(92 64 28 / 0.14),
+      transparent 6% 90%,
+      rgb(92 64 28 / 0.05)
     );
   mix-blend-mode: multiply;
 }
+@media (max-width: 640px) {
+  :root[data-theme="ink"] .paper::after,
+  :root[data-theme="fusion"] .paper::after {
+    background: radial-gradient(
+      120% 90% at 50% 45%,
+      transparent 55%,
+      rgb(92 64 28 / 0.18) 100%
+    );
+  }
+}
 
-/* The placard: 34em measure, lifted clear of browser bars and notches. */
+/* The placard: 36em measure, lifted clear of browser bars and notches; on
+   the title page it sits at the head and the plate is the device below. */
 .caption {
   view-transition-name: caption;
-  padding-bottom: calc(7svh + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--foot);
+}
+.caption[data-title] {
+  top: 12svh;
+  bottom: auto;
+  padding-bottom: 0;
+}
+@media (max-width: 640px) {
+  .caption:not([data-title]) {
+    padding-bottom: calc(var(--foot) + 1.8em);
+  }
 }
 .caption-block {
-  max-width: 34em;
+  max-width: 36em;
+}
+.caption p {
+  line-height: 1.45;
+}
+
+/* The foot of the page: the way back at the left, the catchword and folio
+   at the right, on one baseline. */
+.folio {
+  right: var(--inset-side);
+  bottom: var(--foot);
+  margin: 0;
+}
+.nav-arrow {
+  left: var(--inset-side);
+  bottom: var(--foot);
+  padding: 4px 8px;
+}
+@media (pointer: coarse) {
+  .nav-arrow,
+  .catchword {
+    padding: 12px;
+  }
+}
+
+/* The chrome sits inside the page insets. */
+.chrome {
+  top: var(--inset-top);
+  right: var(--inset-side);
+}
+
+/* The margin notes: beside the plate on wide pages, one line above the
+   placard on phones. */
+.marginalia {
+  right: 6vw;
+  bottom: 42svh;
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+.marginalia-line {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+}
+:root[data-theme="graph"] .marginalia dd,
+:root[data-theme="fusion"] .marginalia dd {
+  font-family: var(--font-label);
+  font-variant-numeric: tabular-nums;
+}
+:root[data-theme="fusion"] .marginalia dd {
+  color: var(--accent);
+}
+@media (max-width: 640px) {
+  .marginalia {
+    left: 0;
+    right: 0;
+    top: 55svh;
+    bottom: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 1em;
+    text-align: center;
+  }
+}
+
+/* Panels and dialogs wear the sheet. */
+dialog {
+  accent-color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--paper-tile, none);
+  background-size: 512px;
+}
+dialog::backdrop {
+  background: rgb(43 33 26 / 0.22);
+}
+
+/* A drafted sheet letters in capitals; the fusion plate keeps real small caps. */
+:root[data-theme="graph"] .font-display {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+:root[data-theme="fusion"] .font-display {
+  font-variant-caps: small-caps;
 }
 
 /* The marginal note by the gear: fades in once the plate has settled. */
@@ -261,7 +415,10 @@ body {
   }
 }
 
-/* Technical line types; the ink theme leaves them as plain hairlines. */
+/* Technical line types; the ink theme does not draw them at all. */
+:root[data-theme="ink"] .ink path[data-dash] {
+  display: none;
+}
 :root[data-theme="graph"] .ink path[data-dash="center"],
 :root[data-theme="fusion"] .ink path[data-dash="center"] {
   stroke-dasharray: 18 3 3 3;
@@ -304,4 +461,35 @@ body {
   stroke: var(--accent);
   stroke-width: 1.2px;
   stroke-dasharray: 4 4;
+}
+
+/* The bench list: each machine drawn small, its name beneath. */
+.bench-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.bench-item svg {
+  width: 64px;
+  height: 42px;
+}
+.bench-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.bench-item svg path {
+  stroke-width: 1px;
+}
+.bench-item svg path[data-stroke="hatch"] {
+  stroke-width: 0.5px;
+}
+@media (max-width: 640px) {
+  .bench-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.6rem;
+    max-width: 100vw;
+  }
 }

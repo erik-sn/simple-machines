@@ -26,6 +26,7 @@ import {
   type WorldPort,
 } from "./TheatreController";
 import { useComposition } from "./useComposition";
+import { VIGNETTE_HEIGHT, VIGNETTE_WIDTH, vignetteFor } from "./vignettes";
 
 export const THEATRE_SETTINGS: readonly SettingSpec[] = [
   {
@@ -41,7 +42,7 @@ export const THEATRE_SETTINGS: readonly SettingSpec[] = [
 
 const CAMERA = { x: 0, y: 0.4, height: 6, width: 9 };
 const SNAP_RADIUS = 0.3;
-const PORT_RADIUS = 0.06;
+const PORT_RADIUS = 0.045;
 const ROPE_HANG = 0.6;
 
 interface Props {
@@ -53,6 +54,7 @@ interface Props {
 export function TheatreView({ settings }: Props) {
   const { composition, ready, error, update } = useComposition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { theme } = useTheme();
   const gravity = settings.gravity ?? 9.8;
 
   function add(kind: TheatreKind) {
@@ -89,18 +91,53 @@ export function TheatreView({ settings }: Props) {
         aria-label="Bench"
         className="absolute top-1/2 left-6 -translate-y-1/2"
       >
-        <ul className="space-y-1">
-          {THEATRE_KINDS.map((kind) => (
-            <li key={kind}>
-              <button
-                type="button"
-                onClick={() => add(kind)}
-                className="font-display text-ink-soft hover:text-ink text-step--1 lowercase tracking-widest"
-              >
-                {PREFAB_LABELS[kind]}
-              </button>
-            </li>
-          ))}
+        <ul className="bench-list">
+          {THEATRE_KINDS.map((kind) => {
+            const vignette = vignetteFor(kind, theme);
+            return (
+              <li key={kind}>
+                <button
+                  type="button"
+                  onClick={() => add(kind)}
+                  className="bench-item text-ink-soft hover:text-ink"
+                >
+                  <svg
+                    className="ink"
+                    viewBox={vignette.viewBox}
+                    width={VIGNETTE_WIDTH}
+                    height={VIGNETTE_HEIGHT}
+                    aria-hidden="true"
+                  >
+                    <g transform="scale(1 -1)">
+                      {vignette.statics.map((path) => (
+                        <path
+                          key={path.d}
+                          d={path.d}
+                          data-stroke={path.stroke}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
+                      {vignette.parts.map((part) => (
+                        <g key={part.transform} transform={part.transform}>
+                          {part.paths.map((path) => (
+                            <path
+                              key={path.d}
+                              d={path.d}
+                              data-stroke={path.stroke}
+                              vectorEffect="non-scaling-stroke"
+                            />
+                          ))}
+                        </g>
+                      ))}
+                    </g>
+                  </svg>
+                  <span className="font-display text-step--1 lowercase tracking-widest">
+                    {PREFAB_LABELS[kind]}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
           {composition.nodes.length > 0 && (
             <li className="pt-3">
               <button
@@ -635,7 +672,7 @@ function Bench({
                   data-node-handle={node.id}
                   cx={node.x}
                   cy={node.y}
-                  r={0.14}
+                  r={0.09}
                   vectorEffect="non-scaling-stroke"
                 >
                   <title>{`Move the ${PREFAB_LABELS[node.kind].toLowerCase()}`}</title>

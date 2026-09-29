@@ -12,10 +12,10 @@ export function Marginalia({ store }: Props) {
     return null;
   }
   return (
-    <dl className="marginalia pointer-events-none absolute top-5 left-6 font-display text-step--1">
+    <dl className="marginalia pointer-events-none absolute">
       {readouts.map((readout) => (
-        <div key={readout.label} className="flex gap-2">
-          <dt className="text-ink-soft">{readout.label}</dt>
+        <div key={readout.label} className="marginalia-line">
+          <dt className="text-ink-faint italic">{readout.label}</dt>
           <dd className="text-ink">{readout.value}</dd>
         </div>
       ))}
