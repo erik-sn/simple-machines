@@ -53,6 +53,19 @@ const SKIN = 2 * Settings.polygonRadius - Settings.linearSlop;
 const DRIVE = 0.6;
 const BASE_HALF = 1.7;
 
+// Drawing only. The plate is seen a little from above and the right, as the
+// shared weight block is: a block's top and right faces recede up and right
+// by this share of its width and height. The wedge reaches halfway into the
+// split, so its faces recede half as far.
+const BLOCK_DEPTH_X = 0.12;
+const BLOCK_DEPTH_Y = 0.08;
+const WEDGE_DEPTH_X = 0.06;
+const WEDGE_DEPTH_Y = 0.04;
+// A receding right face is the shadow side; the book hatches it at 70.
+const RIGHT_FACE_HATCH = 70;
+// The log's shadow side: a hatched band this wide inside its right edge.
+const LOG_BAND = 0.12;
+
 const DEFAULT_ANGLE = 20;
 const DEFAULT_FRICTION = 0.2;
 const DEFAULT_RESISTANCE = 20;
@@ -133,18 +146,55 @@ function joined<T extends Joint>(joint: T | null, what: string): T {
   return joint;
 }
 
-function rectangle(halfWidth: number, halfHeight: number): Shape {
-  return {
+// A block as Guidobaldo draws it: front plain, top plain, right face hatched.
+// The left block shows no right face: that is the split, behind the right
+// block. Every face is opaque, so a block hides the wedge's flank where it
+// is inside the split, and the right block hides the left one's top face
+// where it runs behind.
+function splitBlockShapes(side: -1 | 1): Shape[] {
+  const w = BLOCK_WIDTH / 2;
+  const h = BLOCK_HEIGHT / 2;
+  const dx = BLOCK_DEPTH_X * BLOCK_WIDTH;
+  const dy = BLOCK_DEPTH_Y * BLOCK_HEIGHT;
+  const front: Shape = {
     kind: "polygon",
     points: [
-      { x: -halfWidth, y: -halfHeight },
-      { x: halfWidth, y: -halfHeight },
-      { x: halfWidth, y: halfHeight },
-      { x: -halfWidth, y: halfHeight },
+      { x: -w, y: -h },
+      { x: w, y: -h },
+      { x: w, y: h },
+      { x: -w, y: h },
+    ],
+    closed: true,
+    opaque: true,
+  };
+  const top: Shape = {
+    kind: "polygon",
+    points: [
+      { x: -w, y: h },
+      { x: -w + dx, y: h + dy },
+      { x: w + dx, y: h + dy },
+      { x: w, y: h },
+    ],
+    closed: true,
+    opaque: true,
+  };
+  if (side < 0) {
+    return [front, top];
+  }
+  const right: Shape = {
+    kind: "polygon",
+    points: [
+      { x: w, y: -h },
+      { x: w + dx, y: -h + dy },
+      { x: w + dx, y: h + dy },
+      { x: w, y: h },
     ],
     closed: true,
     fill: true,
+    opaque: true,
+    hatch: { angle: RIGHT_FACE_HATCH },
   };
+  return [front, top, right];
 }
 
 // The end grain of a standing log, seen a little from above: half an ellipse
@@ -174,7 +224,10 @@ function endGrain(
 const BARK_BUMPS = [0.02, 0.008, 0.028, 0.012, 0.024, 0.006];
 
 // Half a split log: bark on the outer edge, the split face inward, the end
-// grain on top with its rings.
+// grain on top with its rings. The body is opaque and the end grain masked,
+// so the log hides the wedge's flank inside the split. A hatched band inside
+// the right edge (the bark of the right half, the split face of the left) is
+// the shadow side of the round.
 function logShapes(side: -1 | 1): Shape[] {
   const w = BLOCK_WIDTH / 2;
   const h = BLOCK_HEIGHT / 2;
@@ -189,7 +242,35 @@ function logShapes(side: -1 | 1): Shape[] {
     kind: "polygon",
     points: [{ x: inner, y: -h }, { x: outer, y: -h }, ...bark, ...frontRim],
     closed: true,
+    opaque: true,
+  };
+  // The end grain, paper only: drawn before the body, whose outline then
+  // draws the front rim once.
+  const grain: Shape = {
+    kind: "polygon",
+    points: endGrain(side, 1, -Math.PI / 2, Math.PI / 2),
+    closed: true,
+    opaque: true,
+    outline: false,
+  };
+  // The band runs from the bottom to the rim along the local right edge: the
+  // bumpy bark for the right half, the straight split for the left. Its
+  // inner edge meets the rim where the rim's x is bandEdge.
+  const bandEdge = w - LOG_BAND;
+  const bandPhi = -Math.acos(side * (bandEdge - inner));
+  const rimStart = side > 0 ? 0 : -Math.PI / 2;
+  const band: Shape = {
+    kind: "polygon",
+    points: [
+      { x: bandEdge, y: -h },
+      { x: w, y: -h },
+      ...(side > 0 ? bark : []),
+      ...endGrain(side, 1, rimStart, bandPhi),
+    ],
+    closed: true,
     fill: true,
+    outline: false,
+    hatch: { angle: RIGHT_FACE_HATCH },
   };
   const backRim: Shape = {
     kind: "polygon",
@@ -202,9 +283,49 @@ function logShapes(side: -1 | 1): Shape[] {
     closed: false,
     stroke: "soft",
   }));
-  return [body, backRim, ...rings];
+  return [grain, body, band, backRim, ...rings];
 }
 
+// The wedge's receding faces, drawn before the blocks so that inside the
+// split they vanish behind the right block: the right flank, in shadow, and
+// for a wooden wedge the top of its head. An iron wedge's cap covers its head.
+function wedgeBackShapes(headHalfWidth: number, iron: boolean): Shape[] {
+  const w = headHalfWidth;
+  const L = WEDGE_LENGTH;
+  const dx = WEDGE_DEPTH_X;
+  const dy = WEDGE_DEPTH_Y;
+  const flank: Shape = {
+    kind: "polygon",
+    points: [
+      { x: 0, y: 0 },
+      { x: dx, y: dy },
+      { x: w + dx, y: L + dy },
+      { x: w, y: L },
+    ],
+    closed: true,
+    fill: true,
+    opaque: true,
+    hatch: { angle: RIGHT_FACE_HATCH },
+  };
+  if (iron) {
+    return [flank];
+  }
+  const head: Shape = {
+    kind: "polygon",
+    points: [
+      { x: -w, y: L },
+      { x: -w + dx, y: L + dy },
+      { x: w + dx, y: L + dy },
+      { x: w, y: L },
+    ],
+    closed: true,
+    opaque: true,
+  };
+  return [flank, head];
+}
+
+// The wedge's front, drawn last and plain: it faces the light, and being
+// opaque it hides the split's rim behind it.
 function wedgeShapes(headHalfWidth: number, iron: boolean): Shape[] {
   const blade: Shape = {
     kind: "polygon",
@@ -214,7 +335,7 @@ function wedgeShapes(headHalfWidth: number, iron: boolean): Shape[] {
       { x: -headHalfWidth, y: WEDGE_LENGTH },
     ],
     closed: true,
-    fill: true,
+    opaque: true,
   };
   if (!iron) {
     // A band below the head, where the mallet has hardened it.
@@ -227,7 +348,8 @@ function wedgeShapes(headHalfWidth: number, iron: boolean): Shape[] {
     return [blade, band];
   }
   // An iron wedge's head mushrooms under the sledge: it spreads past the
-  // blade and curls over.
+  // blade and curls over. Outline only, and opaque: it covers the flank's
+  // top corner.
   const w = headHalfWidth;
   const L = WEDGE_LENGTH;
   const over = 0.05;
@@ -247,7 +369,7 @@ function wedgeShapes(headHalfWidth: number, iron: boolean): Shape[] {
       { x: w, y: L },
     ],
     closed: true,
-    fill: true,
+    opaque: true,
   };
   return [blade, cap];
 }
@@ -371,16 +493,19 @@ export const wedgeScene: SceneDefinition = {
     const leftPart: Part = {
       id: "left-block",
       body: left,
-      shapes: layout.log
-        ? logShapes(-1)
-        : [rectangle(BLOCK_WIDTH / 2, BLOCK_HEIGHT / 2)],
+      shapes: layout.log ? logShapes(-1) : splitBlockShapes(-1),
     };
     const rightPart: Part = {
       id: "right-block",
       body: right,
-      shapes: layout.log
-        ? logShapes(1)
-        : [rectangle(BLOCK_WIDTH / 2, BLOCK_HEIGHT / 2)],
+      shapes: layout.log ? logShapes(1) : splitBlockShapes(1),
+    };
+    // The wedge is two parts on one body, for the draw order: its receding
+    // faces go under the right block, its front over everything.
+    const wedgeBackPart: Part = {
+      id: "wedge-back",
+      body: wedge,
+      shapes: wedgeBackShapes(hw, layout.log),
     };
     const wedgePart: Part = {
       id: "wedge",
@@ -402,7 +527,7 @@ export const wedgeScene: SceneDefinition = {
     const tanHalf = Math.tan(layout.halfAngle);
 
     const machine: Machine = {
-      parts: [leftPart, rightPart, wedgePart],
+      parts: [leftPart, wedgeBackPart, rightPart, wedgePart],
       ropes: [],
       statics: [baseLine],
       ports: [
