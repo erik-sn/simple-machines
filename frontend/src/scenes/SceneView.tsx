@@ -159,6 +159,7 @@ export function SceneView({
                     d={path.d}
                     pathLength={1}
                     data-stroke={path.stroke}
+                    data-fill={path.fill}
                     data-dash={path.dash}
                     vectorEffect="non-scaling-stroke"
                   />
@@ -201,6 +202,7 @@ export function SceneView({
                         d={path.d}
                         pathLength={1}
                         data-stroke={path.stroke}
+                        data-fill={path.fill}
                         data-dash={path.dash}
                         vectorEffect="non-scaling-stroke"
                       />

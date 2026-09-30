@@ -16,7 +16,9 @@ import type { ThemeId } from "../theme/themes";
 export interface InkPath {
   d: string;
   stroke: Stroke | "hatch";
-  fill: boolean;
+  // "paper": painted paper-white under the shape's own outline, before its
+  // hatch and outline, so it hides whatever was drawn earlier.
+  fill?: "paper";
   dash?: "center" | "hidden";
 }
 
@@ -177,13 +179,19 @@ function scaled(value: number): string {
   return (value / SCALE).toFixed(4);
 }
 
-// rough.js's op set as SVG path data, back in metres.
-function opsToPath(set: OpSet): string {
+// rough.js's op set as SVG path data, back in metres. As a loop, only the
+// first move is kept: rough.js draws each edge as its own subpath, but with
+// preserveVertices they meet exactly, so dropping the inner moves closes the
+// very same wobble into one fillable region.
+function opsToPath(set: OpSet, loop = false): string {
   let d = "";
   for (const op of set.ops) {
     const v = op.data;
     switch (op.op) {
       case "move":
+        if (loop && d !== "") {
+          break;
+        }
         d += `M${scaled(v[0] ?? 0)} ${scaled(v[1] ?? 0)} `;
         break;
       case "lineTo":
@@ -197,6 +205,9 @@ function opsToPath(set: OpSet): string {
         throw new Error(`Unknown rough.js op ${String(never)}`);
       }
     }
+  }
+  if (loop && d !== "") {
+    return `${d.trim()} Z`;
   }
   return d.trim();
 }
@@ -217,6 +228,13 @@ export function renderShape(
   const stroke = shape.stroke ?? "ink";
   const outline = !("outline" in shape) || shape.outline !== false;
   const paths: InkPath[] = [];
+  if ("opaque" in shape && shape.opaque === true) {
+    const edge = drawable.sets.find((set) => set.type === "path");
+    if (edge === undefined) {
+      throw new Error(`Opaque shape without an outline: ${shape.kind}`);
+    }
+    paths.push({ d: opsToPath(edge, true), stroke, fill: "paper" });
+  }
   for (const set of drawable.sets) {
     if (set.type === "path" && !outline) {
       continue;
@@ -228,7 +246,6 @@ export function renderShape(
     const path: InkPath = {
       d,
       stroke: set.type === "fillSketch" ? "hatch" : stroke,
-      fill: set.type === "fillPath",
     };
     if (shape.dash !== undefined) {
       path.dash = shape.dash;

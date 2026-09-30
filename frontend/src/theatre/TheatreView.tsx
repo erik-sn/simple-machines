@@ -170,6 +170,7 @@ export function TheatreView({ settings, paused }: Props) {
                           key={path.d}
                           d={path.d}
                           data-stroke={path.stroke}
+                          data-fill={path.fill}
                           vectorEffect="non-scaling-stroke"
                         />
                       ))}
@@ -180,6 +181,7 @@ export function TheatreView({ settings, paused }: Props) {
                               key={path.d}
                               d={path.d}
                               data-stroke={path.stroke}
+                              data-fill={path.fill}
                               vectorEffect="non-scaling-stroke"
                             />
                           ))}
@@ -635,6 +637,7 @@ function Bench({
                         key={path.d}
                         d={path.d}
                         data-stroke={path.stroke}
+                        data-fill={path.fill}
                         vectorEffect="non-scaling-stroke"
                       />
                     )),
@@ -684,6 +687,7 @@ function Bench({
                               key={path.d}
                               d={path.d}
                               data-stroke={path.stroke}
+                              data-fill={path.fill}
                               vectorEffect="non-scaling-stroke"
                             />
                           )),

@@ -9,6 +9,7 @@ import { prefabFor } from "./prefabs";
 export interface VignettePath {
   d: string;
   stroke: string;
+  fill?: "paper";
 }
 
 export interface Vignette {
@@ -57,7 +58,7 @@ export function vignetteFor(kind: TheatreKind, theme: ThemeId): Vignette {
   const pxPerMetre = VIGNETTE_WIDTH / width;
   const statics = machine.statics.flatMap((shape, index) =>
     renderShape(theme, shape, `${kind}:static:${index}`, pxPerMetre).map(
-      (path) => ({ d: path.d, stroke: path.stroke }),
+      (path) => ({ d: path.d, stroke: path.stroke, fill: path.fill }),
     ),
   );
   const parts = machine.parts.map((part) => {
@@ -68,7 +69,7 @@ export function vignetteFor(kind: TheatreKind, theme: ThemeId): Vignette {
       transform: `translate(${p.x} ${p.y}) rotate(${degrees})`,
       paths: part.shapes.flatMap((shape, index) =>
         renderShape(theme, shape, `${part.id}:${index}`, pxPerMetre).map(
-          (path) => ({ d: path.d, stroke: path.stroke }),
+          (path) => ({ d: path.d, stroke: path.stroke, fill: path.fill }),
         ),
       ),
     };
