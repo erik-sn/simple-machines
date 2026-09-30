@@ -1,5 +1,6 @@
 import { Box, PrismaticJoint, PulleyJoint, Vec2 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
+import { blockRingPoint, blockShapes } from "../parts";
 import { ForceSampler } from "../sampler";
 import type {
   Machine,
@@ -42,6 +43,10 @@ const BLOCK_MASS = 0.3;
 const BEAM_HEIGHT = 0.1;
 // An engraver hatches only the shadow side: a band this wide.
 const SHADOW_BAND = 0.03;
+// The strop that binds a period block runs down each cheek this far in.
+const STRAP_INSET = 0.02;
+const TOGGLE_CHAMFER = 0.015;
+const TOGGLE_BAND = 0.02;
 const FIXED_ROW_Y = 1;
 const CLEARANCE = 0.1;
 // Guide travel on the slack side: the toggle may rise this far past where
@@ -318,8 +323,11 @@ function chamfered(e: Extents, c: number): Vec[] {
   ];
 }
 
-// A block's shell: an outline hugging the sheaves, with the solid end that
-// carries the eye hatched. Local coordinates relative to the sheave row.
+// A block's shell: an outline hugging the sheaves, a shadow band inside its
+// right edge, the cap hatched only when it is the underside (a top cap is
+// the one face light reaches under the beam), and a strop down each cheek
+// from the cap line to the far chamfer. Local coordinates relative to the
+// sheave row.
 function shellShapes(
   shell: Extents,
   ox: number,
@@ -351,14 +359,40 @@ function shellShapes(
           { x: e.right, y: e.bottom + c },
           { x: e.right, y: e.bottom + CAP_HEIGHT },
         ];
+  const capLine = capEnd === "top" ? e.top - CAP_HEIGHT : e.bottom + CAP_HEIGHT;
+  const strapEnd = capEnd === "top" ? e.bottom + c : e.top - c;
   return [
     { kind: "polygon", points: chamfered(e, c), closed: true },
     {
       kind: "polygon",
-      points: cap,
+      points: [
+        { x: e.right - SHADOW_BAND, y: e.bottom + c },
+        { x: e.right, y: e.bottom + c },
+        { x: e.right, y: e.top - c },
+        { x: e.right - SHADOW_BAND, y: e.top - c },
+      ],
       closed: true,
       fill: true,
-      hatch: { angle: 60 },
+      outline: false,
+      hatch: { angle: 65 },
+    },
+    {
+      kind: "polygon",
+      points: cap,
+      closed: true,
+      ...(capEnd === "bottom" ? { fill: true, hatch: { angle: 60 } } : {}),
+    },
+    {
+      kind: "segment",
+      from: { x: e.left + STRAP_INSET, y: capLine },
+      to: { x: e.left + STRAP_INSET, y: strapEnd },
+      stroke: "soft",
+    },
+    {
+      kind: "segment",
+      from: { x: e.right - STRAP_INSET, y: capLine },
+      to: { x: e.right - STRAP_INSET, y: strapEnd },
+      stroke: "soft",
     },
   ];
 }
@@ -375,15 +409,16 @@ function rimShapes(x: number, radius: number): Shape[] {
   ];
 }
 
-// A hub and four spokes: the sheave's rotation reads from them.
+// A hub and one diameter, as the plates draw a sheave; the rotation reads
+// from the diameter.
 function sheaveShapes(radius: number): Shape[] {
   const shapes: Shape[] = [
     { kind: "circle", center: { x: 0, y: 0 }, radius: HUB_RADIUS },
   ];
   const inner = HUB_RADIUS + 0.015;
   const outer = radius - 0.04;
-  for (let i = 0; i < 4; i += 1) {
-    const a = (i * Math.PI) / 2;
+  for (let i = 0; i < 2; i += 1) {
+    const a = i * Math.PI;
     shapes.push({
       kind: "segment",
       from: { x: inner * Math.cos(a), y: inner * Math.sin(a) },
@@ -436,53 +471,27 @@ function thimble(at: Vec): Shape {
   return { kind: "circle", center: at, radius: 0.03, stroke: "soft" };
 }
 
-// The lever's weight: a block seen a little from above and the right, front,
-// top, and a hatched right face, its ring linked through an eye centred at
-// eyeY.
+function translated(shape: Shape, by: Vec): Shape {
+  const move = (p: Vec): Vec => ({ x: p.x + by.x, y: p.y + by.y });
+  switch (shape.kind) {
+    case "segment":
+      return { ...shape, from: move(shape.from), to: move(shape.to) };
+    case "polygon":
+      return { ...shape, points: shape.points.map(move) };
+    case "circle":
+    case "arc":
+      return { ...shape, center: move(shape.center) };
+  }
+}
+
+// The book's shared weight block, hung so the top of its ring meets the eye
+// centred at eyeY.
 function weightShapes(eyeY: number): Shape[] {
-  const ringY = eyeY - RING_RADIUS;
-  const top = ringY - 0.05;
-  const bottom = top - 2 * WEIGHT_HALF;
-  return [
-    {
-      kind: "polygon",
-      points: [
-        { x: -WEIGHT_HALF, y: bottom },
-        { x: WEIGHT_HALF, y: bottom },
-        { x: WEIGHT_HALF, y: top },
-        { x: -WEIGHT_HALF, y: top },
-      ],
-      closed: true,
-    },
-    {
-      kind: "polygon",
-      points: [
-        { x: -WEIGHT_HALF, y: top },
-        { x: -WEIGHT_HALF + 0.07, y: top + 0.05 },
-        { x: WEIGHT_HALF + 0.07, y: top + 0.05 },
-        { x: WEIGHT_HALF, y: top },
-      ],
-      closed: true,
-    },
-    {
-      kind: "polygon",
-      points: [
-        { x: WEIGHT_HALF, y: bottom },
-        { x: WEIGHT_HALF + 0.07, y: bottom + 0.05 },
-        { x: WEIGHT_HALF + 0.07, y: top + 0.05 },
-        { x: WEIGHT_HALF, y: top },
-      ],
-      closed: true,
-      fill: true,
-      hatch: { angle: 70 },
-    },
-    {
-      kind: "circle",
-      center: { x: 0.035, y: ringY },
-      radius: RING_RADIUS,
-      stroke: "soft",
-    },
-  ];
+  const ring = blockRingPoint(WEIGHT_HALF, WEIGHT_HALF);
+  const by = { x: 0, y: eyeY - ring.y };
+  return blockShapes({ halfWidth: WEIGHT_HALF, halfHeight: WEIGHT_HALF }).map(
+    (shape) => translated(shape, by),
+  );
 }
 
 function arcPoints(center: Vec, radius: number, over: boolean): Vec[] {
@@ -566,30 +575,32 @@ export const pulleyScene: SceneDefinition = {
           : BLOCK_MASS / (4 * shellBox.hx * shellBox.hy),
       },
     );
-    const blockShapes: Shape[] = [];
+    const blockPartShapes: Shape[] = [];
     let hookAttachY = 0;
     if (shell !== null) {
-      blockShapes.push(
+      blockPartShapes.push(
         ...shellShapes(shell, layout.blockX, layout.blockY, "bottom"),
       );
       for (const s of layout.sheaves) {
         if (!s.fixed) {
-          blockShapes.push(...rimShapes(s.x - layout.blockX, radius));
+          blockPartShapes.push(...rimShapes(s.x - layout.blockX, radius));
         }
       }
       if (!layout.tie.onFixed) {
-        blockShapes.push(thimble({ x: layout.tie.x - layout.blockX, y: 0 }));
+        blockPartShapes.push(
+          thimble({ x: layout.tie.x - layout.blockX, y: 0 }),
+        );
       }
       hookAttachY = shell.bottom - layout.blockY;
     }
-    const eyeY = eyeBelow(hookAttachY, blockShapes);
+    const eyeY = eyeBelow(hookAttachY, blockPartShapes);
     if (context.standalone) {
       const weightTop = eyeY - RING_RADIUS - 0.05;
       block.createFixture(
         new Box(WEIGHT_HALF, WEIGHT_HALF, new Vec2(0, weightTop - WEIGHT_HALF)),
         { density: loadMass / (4 * WEIGHT_HALF * WEIGHT_HALF) },
       );
-      blockShapes.push(...weightShapes(eyeY));
+      blockPartShapes.push(...weightShapes(eyeY));
     }
 
     // The toggle at the rope's free end. Its mass steadies the solver and
@@ -700,7 +711,11 @@ export const pulleyScene: SceneDefinition = {
     const frameHookY = hookBottom(layout.beamBottom) - layout.fixedY;
 
     const framePart: Part = { id: "frame", body: frame, shapes: frameShapes };
-    const blockPart: Part = { id: "block", body: block, shapes: blockShapes };
+    const blockPart: Part = {
+      id: "block",
+      body: block,
+      shapes: blockPartShapes,
+    };
     const handlePart: Part = {
       id: "handle",
       body: handle,
@@ -714,10 +729,24 @@ export const pulleyScene: SceneDefinition = {
               bottom: -HANDLE_HALF_HEIGHT,
               top: HANDLE_HALF_HEIGHT,
             },
-            0.015,
+            TOGGLE_CHAMFER,
           ),
           closed: true,
+        },
+        // Shadow along the toggle's lower edge only.
+        {
+          kind: "polygon",
+          points: [
+            { x: -HANDLE_HALF_WIDTH + TOGGLE_CHAMFER, y: -HANDLE_HALF_HEIGHT },
+            { x: HANDLE_HALF_WIDTH - TOGGLE_CHAMFER, y: -HANDLE_HALF_HEIGHT },
+            { x: HANDLE_HALF_WIDTH, y: -HANDLE_HALF_HEIGHT + TOGGLE_CHAMFER },
+            { x: HANDLE_HALF_WIDTH, y: -HANDLE_HALF_HEIGHT + TOGGLE_BAND },
+            { x: -HANDLE_HALF_WIDTH, y: -HANDLE_HALF_HEIGHT + TOGGLE_BAND },
+            { x: -HANDLE_HALF_WIDTH, y: -HANDLE_HALF_HEIGHT + TOGGLE_CHAMFER },
+          ],
+          closed: true,
           fill: true,
+          outline: false,
           hatch: { angle: 60 },
         },
         // The knot that ties the rope to the toggle.
@@ -812,7 +841,7 @@ export const pulleyScene: SceneDefinition = {
         handlePart,
         ...sheaveParts.map((s) => s.part),
       ],
-      ropes: [{ id: "rope", strands: () => [ropePoints()] }],
+      ropes: [{ id: "rope", strands: () => [ropePoints()], stroke: "soft" }],
       statics: [...beam, ...beamHook],
       ports: [
         {
