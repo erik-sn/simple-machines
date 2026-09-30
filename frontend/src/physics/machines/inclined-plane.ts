@@ -1,5 +1,6 @@
 import { Box, Circle, Polygon, Vec2 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
+import { blockShapes, blockSidePoint } from "../parts";
 import { ForceSampler } from "../sampler";
 import type {
   Machine,
@@ -32,7 +33,12 @@ const WALL_HALF: Vec = { x: 0.05, y: 0.16 };
 // Polygon skins and linear slop leave resting bodies about this far apart;
 // bodies are placed at rest and the block is drawn down to the surface.
 const REST_GAP = 0.015;
-const COURSE_SPACING = 0.14;
+// Drawing only. Light falls from the upper left, so the hatched shadow bands
+// sit on the ramp's vertical right face, the stop's up-slope face, and the
+// wall's right edge; the slope and the landing are lit and stay plain.
+const RAMP_SHADOW = 0.12;
+const SHADOW_BAND = 0.03;
+const HUB_RADIUS = 0.02;
 const WHEEL_RADIUS = 0.11;
 const WHEEL_OFFSET = 0.125;
 const WHEEL_SIDES = 24;
@@ -116,24 +122,23 @@ function pushDistance(layout: Layout): number {
   );
 }
 
-// Horizontal courses through the wedge, the fill of a built ramp, drawn
-// faint so the block reads as the actor.
-function courseLines(layout: Layout): Shape[] {
-  const shapes: Shape[] = [];
-  for (
-    let y = BASE_Y + COURSE_SPACING;
-    y < layout.top.y - COURSE_SPACING / 3;
-    y += COURSE_SPACING
-  ) {
-    const x = layout.foot.x + (y - BASE_Y) / Math.tan(layout.angle);
-    shapes.push({
-      kind: "segment",
-      from: { x, y },
-      to: { x: layout.end.x, y },
-      stroke: "faint",
-    });
-  }
-  return shapes;
+// The ramp's shadow: a band inside its vertical right face, base line to
+// landing. Nothing else on the wedge is hatched; the period plates draw the
+// ramp as a plain outline.
+function rampShadow(layout: Layout): Shape {
+  return {
+    kind: "polygon",
+    points: [
+      { x: layout.end.x - RAMP_SHADOW, y: BASE_Y },
+      { x: layout.end.x, y: BASE_Y },
+      layout.end,
+      { x: layout.end.x - RAMP_SHADOW, y: layout.end.y },
+    ],
+    closed: true,
+    fill: true,
+    outline: false,
+    hatch: { angle: 60 },
+  };
 }
 
 function boxCorners(centre: Vec, half: Vec, angle: number): Vec[] {
@@ -157,30 +162,68 @@ function wheelRim(centre: Vec): Shape {
       y: centre.y + WHEEL_RADIUS * Math.sin(a),
     });
   }
-  return { kind: "polygon", points, closed: true };
+  // Opaque, so the rim hides the bed's lower edge and the axle behind it.
+  return { kind: "polygon", points, closed: true, opaque: true };
 }
 
-function blockShapes(cart: boolean): Shape[] {
-  const bottom = -BLOCK_HALF.y - REST_GAP;
-  const box = (low: number): Shape => ({
-    kind: "polygon",
-    points: [
-      { x: -BLOCK_HALF.x, y: low },
-      { x: BLOCK_HALF.x, y: low },
-      { x: BLOCK_HALF.x, y: BLOCK_HALF.y },
-      { x: -BLOCK_HALF.x, y: BLOCK_HALF.y },
-    ],
-    closed: true,
-    fill: true,
+// Moves shapes along a part's local y: the shared block is drawn about its
+// centre, and here it must reach down to the ramp's surface.
+function shifted(shapes: readonly Shape[], dy: number): Shape[] {
+  const move = (p: Vec): Vec => ({ x: p.x, y: p.y + dy });
+  return shapes.map((shape) => {
+    switch (shape.kind) {
+      case "polygon":
+        return { ...shape, points: shape.points.map(move) };
+      case "segment":
+        return { ...shape, from: move(shape.from), to: move(shape.to) };
+      default:
+        return { ...shape, center: move(shape.center) };
+    }
   });
+}
+
+// The book's block, without its ring, spanning the local heights `low` to
+// `high` so it appears to sit on the ramp while the body rests a hair above.
+function blockBetween(low: number, high: number): Shape[] {
+  return shifted(
+    blockShapes({
+      halfWidth: BLOCK_HALF.x,
+      halfHeight: (high - low) / 2,
+      ring: false,
+    }),
+    (low + high) / 2,
+  );
+}
+
+// The local heights the drawn block spans: the sled sits on the ramp, the
+// cart's bed rides above its wheels.
+function blockSpan(cart: boolean): { low: number; high: number } {
+  const bottom = -BLOCK_HALF.y - REST_GAP;
+  return {
+    low: cart ? bottom + WHEEL_RADIUS * 1.6 : bottom,
+    high: BLOCK_HALF.y,
+  };
+}
+
+// Where a rope ties into the block: the outer edge of its right face, so the
+// rope is not hidden by the block's own opaque faces.
+function eyePoint(cart: boolean): Vec {
+  const { low, high } = blockSpan(cart);
+  const side = blockSidePoint(BLOCK_HALF.x);
+  return { x: side.x, y: side.y + (low + high) / 2 };
+}
+
+function loadShapes(cart: boolean): Shape[] {
+  const { low, high } = blockSpan(cart);
   if (!cart) {
-    return [box(bottom)];
+    return blockBetween(low, high);
   }
   // A bed on two wheels drawn in front of it. The body slides rather than
-  // rolls, so the rims carry no spokes or hubs that would have to turn.
-  const axle = bottom + WHEEL_RADIUS;
+  // rolls, so the rims carry no spokes that would have to turn; a hub marks
+  // each axle end so the rims do not read as loose circles.
+  const axle = -BLOCK_HALF.y - REST_GAP + WHEEL_RADIUS;
   const shapes: Shape[] = [
-    box(axle + WHEEL_RADIUS * 0.6),
+    ...blockBetween(low, high),
     {
       kind: "segment",
       from: { x: -WHEEL_OFFSET, y: axle },
@@ -190,6 +233,12 @@ function blockShapes(cart: boolean): Shape[] {
   ];
   for (const x of [-WHEEL_OFFSET, WHEEL_OFFSET]) {
     shapes.push(wheelRim({ x, y: axle }));
+    shapes.push({
+      kind: "circle",
+      center: { x, y: axle },
+      radius: HUB_RADIUS,
+      stroke: "soft",
+    });
   }
   return shapes;
 }
@@ -307,30 +356,67 @@ export const inclinedPlaneScene: SceneDefinition = {
       }) ?? null;
     let pusherActive = false;
 
+    // The ramp, stop, and wall are solids: each is an outline painted
+    // opaque, with one hatched band on its shadow side. The stop's band lies
+    // inside its up-slope face, measured along the slope's unit vector; the
+    // wall's inside its right edge.
+    const stopShadowCentre = onSlope(
+      layout,
+      STOP_ALONG + STOP_HALF.x - SHADOW_BAND / 2,
+      STOP_HALF.y,
+    );
+    const wallShadowCentre = {
+      x: wallCentre.x + WALL_HALF.x - SHADOW_BAND / 2,
+      y: wallCentre.y,
+    };
     const rampPart: Part = {
       id: "ramp",
       body: ramp,
       shapes: [
-        { kind: "polygon", points: wedge, closed: true },
-        ...courseLines(layout),
+        { kind: "polygon", points: wedge, closed: true, opaque: true },
+        rampShadow(layout),
         {
           kind: "polygon",
           points: boxCorners(stopCentre, STOP_HALF, layout.angle),
           closed: true,
+          opaque: true,
+        },
+        {
+          kind: "polygon",
+          points: boxCorners(
+            stopShadowCentre,
+            { x: SHADOW_BAND / 2, y: STOP_HALF.y },
+            layout.angle,
+          ),
+          closed: true,
           fill: true,
+          outline: false,
+          hatch: { angle: 70 },
         },
         {
           kind: "polygon",
           points: boxCorners(wallCentre, WALL_HALF, 0),
           closed: true,
+          opaque: true,
+        },
+        {
+          kind: "polygon",
+          points: boxCorners(
+            wallShadowCentre,
+            { x: SHADOW_BAND / 2, y: WALL_HALF.y },
+            0,
+          ),
+          closed: true,
           fill: true,
+          outline: false,
+          hatch: { angle: 65 },
         },
       ],
     };
     const blockPart: Part = {
       id: "block",
       body: block,
-      shapes: blockShapes(layout.cart),
+      shapes: loadShapes(layout.cart),
       grab: { hintAt: { x: 0, y: layout.cart ? 0.06 : 0 } },
     };
     const pusherPart: Part | null =
@@ -380,7 +466,7 @@ export const inclinedPlaneScene: SceneDefinition = {
           id: "eye",
           kind: "ropeAnchor",
           part: "block",
-          at: { x: BLOCK_HALF.x, y: 0 },
+          at: eyePoint(layout.cart),
           role: "either",
         },
       ],

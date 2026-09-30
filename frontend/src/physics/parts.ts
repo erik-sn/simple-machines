@@ -75,3 +75,10 @@ export function blockRingPoint(halfWidth: number, halfHeight: number): Vec {
   const { dy } = depth(halfWidth);
   return { x: 0.035, y: halfHeight + dy + 0.05 };
 }
+
+// The outer edge of the block's right face at mid height, in the block's local
+// frame: where a rope leaving the block sideways clears its opaque faces.
+export function blockSidePoint(halfWidth: number): Vec {
+  const { dx, dy } = depth(halfWidth);
+  return { x: halfWidth + dx, y: dy };
+}
