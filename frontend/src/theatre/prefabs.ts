@@ -9,6 +9,8 @@ import type { TheatreKind } from "./composition";
 // a weight (the load) and a hook (a point fixed to the page).
 
 const WEIGHT_HALF = 0.16;
+// The ring is drawn on the receding top face, right of centre; a rope hangs
+// the block from its centre line, so the ports sit at x = 0 at the ring's height.
 const RING = blockRingPoint(WEIGHT_HALF, WEIGHT_HALF);
 
 const WEIGHT_SETTINGS: readonly SettingSpec[] = [
@@ -69,14 +71,14 @@ const weightScene: SceneDefinition = {
           id: "eye",
           kind: "pin",
           part: "block",
-          at: { x: RING.x, y: RING.y - 0.05 },
+          at: { x: 0, y: RING.y - 0.05 },
           role: "load",
         },
         {
           id: "rope-end",
           kind: "ropeEnd",
           part: "block",
-          at: { x: RING.x, y: RING.y + 0.02 },
+          at: { x: 0, y: RING.y + 0.02 },
           role: "load",
         },
         {
