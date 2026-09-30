@@ -9,6 +9,7 @@ import {
   WeldJoint,
 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
+import { blockShapes } from "../parts";
 import { ForceSampler } from "../sampler";
 import type {
   Keyframe,
@@ -52,9 +53,6 @@ const SCREW_DENSITY = 20;
 
 const NUT_HALF_WIDTH = 0.15;
 const NUT_HALF_HEIGHT = 0.08;
-// Half width of the bore the shank passes through in the nut, the table and
-// the weight; a little wider than the shank so the lines stay apart.
-const BORE_HALF_WIDTH = 0.08;
 const TABLE_HALF_WIDTH = 0.36;
 const TABLE_THICKNESS = 0.05;
 const TABLE_TOP = NUT_HALF_HEIGHT + TABLE_THICKNESS;
@@ -83,7 +81,22 @@ const UPRIGHT_X = 0.42;
 const UPRIGHT_WIDTH = 0.07;
 const BEAM_HALF_WIDTH = 0.54;
 const BEAM_THICKNESS = 0.1;
-const BEAM_BORE_HALF_WIDTH = 0.1;
+
+// Drawing only. Light from the upper left: shadow bands sit on undersides
+// (hatched at 60), vertical right faces (65), and take a quarter to a third
+// of the part's depth, as on the lever plate.
+const PLATE_SHADOW = 0.06;
+const PEDESTAL_SHADOW = 0.05;
+const NUT_SHADOW = 0.045;
+const TABLE_SHADOW = 0.018;
+const BEAM_SHADOW = 0.03;
+const UPRIGHT_SHADOW = 0.02;
+// The bar's collar on the head, seen from above.
+const COLLAR_RADIUS = 0.045;
+// How deep the thread's root cuts into the shank's silhouette, and how many
+// segments draw each half-turn of thread.
+const THREAD_NOTCH = 0.012;
+const THREAD_SEGMENTS = 8;
 
 const EFFORT_THRESHOLD = 0.2;
 // Advantage is measured while the screw creeps: between a turn a minute and
@@ -139,10 +152,10 @@ export const SCREW_SETTINGS: readonly SettingSpec[] = [
   {
     key: "lead",
     label: "Lead",
-    min: 0.01,
+    min: 0.02,
     max: 0.1,
     step: 0.005,
-    defaultValue: 0.03,
+    defaultValue: 0.05,
     unit: "m",
   },
   {
@@ -190,83 +203,130 @@ function formatRatio(value: number): string {
   return value.toFixed(value < 10 ? 1 : 0);
 }
 
+function corners(x0: number, y0: number, x1: number, y1: number): Vec[] {
+  return [
+    { x: x0, y: y0 },
+    { x: x1, y: y0 },
+    { x: x1, y: y1 },
+    { x: x0, y: y1 },
+  ];
+}
+
+// An outline; opaque when it stands in front of the thread.
 function rect(
   x0: number,
   y0: number,
   x1: number,
   y1: number,
-  fill: boolean,
+  opaque = false,
 ): Shape {
   return {
     kind: "polygon",
-    points: [
-      { x: x0, y: y0 },
-      { x: x1, y: y0 },
-      { x: x1, y: y1 },
-      { x: x0, y: y1 },
-    ],
+    points: corners(x0, y0, x1, y1),
     closed: true,
-    fill,
+    opaque,
   };
 }
 
-function bridge(y: number, halfWidth: number, dx = 0, dy = 0): Shape {
+// A shadow band: hatching with no outline of its own.
+function shade(points: readonly Vec[], angle: number): Shape {
   return {
-    kind: "segment",
-    from: { x: dx - halfWidth, y: dy + y },
-    to: { x: dx + halfWidth, y: dy + y },
-    stroke: "soft",
+    kind: "polygon",
+    points,
+    closed: true,
+    fill: true,
+    outline: false,
+    hatch: { angle },
   };
 }
 
-// A block the shank passes through, drawn in half section: hatched cheeks
-// either side of the bore and the bore's far wall between them, as the
-// period plates draw a nut cut open on its screw.
-function bored(x0: number, y0: number, x1: number, y1: number): Shape[] {
-  return [
-    rect(x0, y0, -BORE_HALF_WIDTH, y1, true),
-    rect(BORE_HALF_WIDTH, y0, x1, y1, true),
-    bridge(y0, BORE_HALF_WIDTH),
-    bridge(y1, BORE_HALF_WIDTH),
-  ];
+function band(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  angle: number,
+): Shape {
+  return shade(corners(x0, y0, x1, y1), angle);
 }
 
-// The thread as a barber pole. A right-hand helix seen from the side is a
-// row of slanted lines one lead apart, and turning the screw by dθ looks
-// exactly like sliding them along the axis by lead · dθ / 2π. The front half
-// of each turn climbs half a lead while crossing the shank; the lines are
-// drawn climbing a whole lead, the engraver's exaggeration that keeps a fine
-// thread reading as a thread. A line running off either end of the shank is
-// cut where it leaves.
-function threadStrands(angle: number, lead: number, origin: Vec): Vec[][] {
-  const halfRise = lead / 2;
-  const shift = ((((angle / TAU) * lead) % lead) + lead) % lead;
+// The thread. Turning the screw by dθ looks exactly like sliding the thread
+// along the axis by lead · dθ / 2π, so every frame the turns are laid out
+// from this shift of the pattern.
+function threadShift(angle: number, lead: number): number {
+  return ((((angle / TAU) * lead) % lead) + lead) % lead;
+}
+
+// The centre height of every turn that could show on the shank.
+function turnCentres(shift: number, lead: number): number[] {
   const count = Math.ceil((SHANK_TOP - SHANK_BOTTOM) / lead) + 2;
-  const strands: Vec[][] = [];
+  const centres: number[] = [];
   for (let i = 0; i < count; i += 1) {
-    const centre = SHANK_BOTTOM - lead + shift + i * lead;
-    const ya = centre - halfRise;
-    const yb = centre + halfRise;
-    const lo = Math.max(ya, SHANK_BOTTOM);
-    const hi = Math.min(yb, SHANK_TOP);
-    if (lo >= hi) {
-      continue;
+    centres.push(SHANK_BOTTOM - lead + shift + i * lead);
+  }
+  return centres;
+}
+
+const onShank = (y: number) => y >= SHANK_BOTTOM && y <= SHANK_TOP;
+
+// The front half of each turn, seen from the side, is a sine curve climbing
+// from the left silhouette to the right and meeting both tangentially; that
+// tangency is what makes a helix read as a helix and not as hatching. Each
+// curve climbs a whole lead where a true half-turn climbs half of one, the
+// engraver's exaggeration that keeps a fine thread reading as a thread.
+// Points past either end of the shank are dropped.
+function threadStrands(shift: number, lead: number, origin: Vec): Vec[][] {
+  const strands: Vec[][] = [];
+  for (const centre of turnCentres(shift, lead)) {
+    const points: Vec[] = [];
+    for (let k = 0; k <= THREAD_SEGMENTS; k += 1) {
+      const y = centre - lead / 2 + (lead * k) / THREAD_SEGMENTS;
+      if (!onShank(y)) {
+        continue;
+      }
+      const t = -Math.PI / 2 + (Math.PI * k) / THREAD_SEGMENTS;
+      points.push({
+        x: origin.x + THREAD_RADIUS * Math.sin(t),
+        y: origin.y + y,
+      });
     }
-    const xAt = (y: number) =>
-      -THREAD_RADIUS + ((y - ya) / (yb - ya)) * 2 * THREAD_RADIUS;
-    strands.push([
-      { x: origin.x + xAt(lo), y: origin.y + lo },
-      { x: origin.x + xAt(hi), y: origin.y + hi },
-    ]);
+    if (points.length >= 2) {
+      strands.push(points);
+    }
   }
   return strands;
+}
+
+// The shank's two edges, notched where the thread's root crosses the
+// silhouette: a crest where each curve leaves the edge, a root half a lead
+// on. Built from the same shift as the thread, so the notches slide with it.
+function shankStrands(shift: number, lead: number, origin: Vec): Vec[][] {
+  const left: Vec[] = [];
+  const right: Vec[] = [];
+  for (const centre of turnCentres(shift, lead)) {
+    left.push(
+      { x: -THREAD_RADIUS, y: centre - lead / 2 },
+      { x: -THREAD_RADIUS + THREAD_NOTCH, y: centre },
+    );
+    right.push(
+      { x: THREAD_RADIUS, y: centre + lead / 2 },
+      { x: THREAD_RADIUS - THREAD_NOTCH, y: centre + lead },
+    );
+  }
+  const edge = (points: Vec[], x: number): Vec[] =>
+    [
+      { x, y: SHANK_BOTTOM },
+      ...points.filter((p) => onShank(p.y)),
+      { x, y: SHANK_TOP },
+    ].map((p) => ({ x: origin.x + p.x, y: origin.y + p.y }));
+  return [edge(left, -THREAD_RADIUS), edge(right, THREAD_RADIUS)];
 }
 
 export const screwScene: SceneDefinition = {
   settings: SCREW_SETTINGS,
   camera: { x: 0, y: -0.42, height: 3.7, width: 2.4 },
   build(world, page, values, variant, context) {
-    const lead = values.lead ?? 0.03;
+    const lead = values.lead ?? 0.05;
     const loadMass = values.load ?? 4;
     const threadFriction = values.threadFriction ?? 0.15;
     const gravity = values.gravity ?? 9.8;
@@ -405,41 +465,87 @@ export const screwScene: SceneDefinition = {
       throw new Error("The world refused the press's spring");
     }
 
-    const basePart: Part = {
-      id: "base",
-      body: base,
-      shapes: [
-        rect(-PLATE_HALF_WIDTH, 0, PLATE_HALF_WIDTH, PLATE_THICKNESS, true),
-        {
-          kind: "polygon",
-          points: [
-            { x: -PEDESTAL_HALF_FOOT, y: PLATE_THICKNESS },
-            { x: PEDESTAL_HALF_FOOT, y: PLATE_THICKNESS },
-            { x: PEDESTAL_HALF_TOP, y: PLATE_THICKNESS + PEDESTAL_HEIGHT },
-            { x: -PEDESTAL_HALF_TOP, y: PLATE_THICKNESS + PEDESTAL_HEIGHT },
-          ],
-          closed: true,
-          fill: true,
-        },
-        {
-          kind: "segment",
-          from: { x: -PLATE_HALF_WIDTH - 0.15, y: -0.02 },
-          to: { x: PLATE_HALF_WIDTH + 0.15, y: -0.02 },
-          stroke: "soft",
-        },
-      ],
-    };
+    // The base plate and its pedestal: outlines, a band on the plate's right
+    // end and along the pedestal's right edge, a ground line beneath.
+    const pedestalFoot = PLATE_THICKNESS;
+    const pedestalTop = PLATE_THICKNESS + PEDESTAL_HEIGHT;
+    const baseShapes: Shape[] = [
+      rect(-PLATE_HALF_WIDTH, 0, PLATE_HALF_WIDTH, PLATE_THICKNESS),
+      band(
+        PLATE_HALF_WIDTH - PLATE_SHADOW,
+        0,
+        PLATE_HALF_WIDTH,
+        PLATE_THICKNESS,
+        65,
+      ),
+      {
+        kind: "polygon",
+        points: [
+          { x: -PEDESTAL_HALF_FOOT, y: pedestalFoot },
+          { x: PEDESTAL_HALF_FOOT, y: pedestalFoot },
+          { x: PEDESTAL_HALF_TOP, y: pedestalTop },
+          { x: -PEDESTAL_HALF_TOP, y: pedestalTop },
+        ],
+        closed: true,
+      },
+      shade(
+        [
+          { x: PEDESTAL_HALF_FOOT, y: pedestalFoot },
+          { x: PEDESTAL_HALF_TOP, y: pedestalTop },
+          { x: PEDESTAL_HALF_TOP - PEDESTAL_SHADOW, y: pedestalTop },
+          { x: PEDESTAL_HALF_FOOT - PEDESTAL_SHADOW, y: pedestalFoot },
+        ],
+        65,
+      ),
+      {
+        kind: "segment",
+        from: { x: -PLATE_HALF_WIDTH - 0.15, y: -0.02 },
+        to: { x: PLATE_HALF_WIDTH + 0.15, y: -0.02 },
+        stroke: "soft",
+      },
+    ];
+    if (layout.spring !== null) {
+      // The press frame: two uprights from the base plate carrying the beam
+      // the spring bears on. It belongs to the base body rather than to the
+      // statics because parts are drawn after ropes and statics before them:
+      // only here can the opaque beam hide the thread and the spring's end.
+      const beamBottom = layout.spring.beamY - BASE_Y;
+      const beamTop = beamBottom + BEAM_THICKNESS;
+      for (const side of [-1, 1]) {
+        const inner = side * UPRIGHT_X;
+        const outer = side * (UPRIGHT_X + UPRIGHT_WIDTH);
+        const right = Math.max(inner, outer);
+        baseShapes.push(
+          rect(inner, pedestalFoot, outer, beamTop),
+          band(right - UPRIGHT_SHADOW, pedestalFoot, right, beamTop, 65),
+        );
+      }
+      baseShapes.push(
+        rect(-BEAM_HALF_WIDTH, beamBottom, BEAM_HALF_WIDTH, beamTop, true),
+        band(
+          -BEAM_HALF_WIDTH,
+          beamBottom,
+          BEAM_HALF_WIDTH,
+          beamBottom + BEAM_SHADOW,
+          60,
+        ),
+      );
+    }
+    const basePart: Part = { id: "base", body: base, shapes: baseShapes };
+
+    // The bar and head seen from above: the bar's turning is the rotation
+    // cue, so the head is a plain disc with the bar's collar on it.
     const screwPart: Part = {
       id: "screw",
       body: screw,
       shapes: [
-        rect(-radius, -BAR_HALF_THICKNESS, radius, BAR_HALF_THICKNESS, false),
-        // The head, hatched so its turning shows.
+        rect(-radius, -BAR_HALF_THICKNESS, radius, BAR_HALF_THICKNESS),
+        { kind: "circle", center: { x: 0, y: 0 }, radius: HEAD_RADIUS },
         {
           kind: "circle",
           center: { x: 0, y: 0 },
-          radius: HEAD_RADIUS,
-          fill: true,
+          radius: COLLAR_RADIUS,
+          stroke: "soft",
         },
         {
           kind: "circle",
@@ -456,7 +562,8 @@ export const screwScene: SceneDefinition = {
       ],
       grab: { hintAt: { x: radius, y: 0 } },
     };
-    // The nut and its table, cut open on the shank like the weight.
+    // The nut and its table as one opaque solid in front of the thread, a
+    // band on the nut's right face and under each wing of the table.
     const platformPart: Part = {
       id: "platform",
       body: platform,
@@ -464,100 +571,81 @@ export const screwScene: SceneDefinition = {
         {
           kind: "polygon",
           points: [
-            { x: -BORE_HALF_WIDTH, y: -NUT_HALF_HEIGHT },
             { x: -NUT_HALF_WIDTH, y: -NUT_HALF_HEIGHT },
-            { x: -NUT_HALF_WIDTH, y: NUT_HALF_HEIGHT },
-            { x: -TABLE_HALF_WIDTH, y: NUT_HALF_HEIGHT },
-            { x: -TABLE_HALF_WIDTH, y: TABLE_TOP },
-            { x: -BORE_HALF_WIDTH, y: TABLE_TOP },
-          ],
-          closed: true,
-          fill: true,
-        },
-        {
-          kind: "polygon",
-          points: [
-            { x: BORE_HALF_WIDTH, y: -NUT_HALF_HEIGHT },
             { x: NUT_HALF_WIDTH, y: -NUT_HALF_HEIGHT },
             { x: NUT_HALF_WIDTH, y: NUT_HALF_HEIGHT },
             { x: TABLE_HALF_WIDTH, y: NUT_HALF_HEIGHT },
             { x: TABLE_HALF_WIDTH, y: TABLE_TOP },
-            { x: BORE_HALF_WIDTH, y: TABLE_TOP },
+            { x: -TABLE_HALF_WIDTH, y: TABLE_TOP },
+            { x: -TABLE_HALF_WIDTH, y: NUT_HALF_HEIGHT },
+            { x: -NUT_HALF_WIDTH, y: NUT_HALF_HEIGHT },
           ],
           closed: true,
-          fill: true,
+          opaque: true,
         },
-        bridge(-NUT_HALF_HEIGHT, BORE_HALF_WIDTH),
-        bridge(TABLE_TOP, BORE_HALF_WIDTH),
+        band(
+          NUT_HALF_WIDTH - NUT_SHADOW,
+          -NUT_HALF_HEIGHT,
+          NUT_HALF_WIDTH,
+          NUT_HALF_HEIGHT,
+          65,
+        ),
+        band(
+          -TABLE_HALF_WIDTH,
+          NUT_HALF_HEIGHT,
+          -NUT_HALF_WIDTH,
+          NUT_HALF_HEIGHT + TABLE_SHADOW,
+          60,
+        ),
+        band(
+          NUT_HALF_WIDTH,
+          NUT_HALF_HEIGHT,
+          TABLE_HALF_WIDTH,
+          NUT_HALF_HEIGHT + TABLE_SHADOW,
+          60,
+        ),
       ],
     };
+    // The book's block, without its ring: nothing hangs it, the table
+    // carries it, and the shank rises through it out of sight.
     const weightPart: Part | null =
       weight === null
         ? null
         : {
             id: "weight",
             body: weight,
-            shapes: bored(
-              -WEIGHT_HALF_WIDTH,
-              -WEIGHT_HALF_HEIGHT,
-              WEIGHT_HALF_WIDTH,
-              WEIGHT_HALF_HEIGHT,
-            ),
+            shapes: blockShapes({
+              halfWidth: WEIGHT_HALF_WIDTH,
+              halfHeight: WEIGHT_HALF_HEIGHT,
+              ring: false,
+            }),
           };
 
+    // The axis, for the technical themes.
     const statics: Shape[] = [
       {
         kind: "segment",
-        from: { x: origin.x - THREAD_RADIUS, y: origin.y + SHANK_BOTTOM },
-        to: { x: origin.x - THREAD_RADIUS, y: origin.y + SHANK_TOP },
-      },
-      {
-        kind: "segment",
-        from: { x: origin.x + THREAD_RADIUS, y: origin.y + SHANK_BOTTOM },
-        to: { x: origin.x + THREAD_RADIUS, y: origin.y + SHANK_TOP },
+        from: { x: origin.x, y: origin.y + BASE_Y - 0.05 },
+        to: { x: origin.x, y: origin.y + HEAD_Y + HEAD_RADIUS + 0.05 },
+        stroke: "faint",
+        dash: "center",
       },
     ];
-    if (layout.spring !== null) {
-      // The press frame: two uprights from the base plate carrying the beam
-      // the spring bears on, the beam cut open where the shank passes.
-      const { beamY } = layout.spring;
-      const footY = origin.y + BASE_Y + PLATE_THICKNESS;
-      const beamTop = origin.y + beamY + BEAM_THICKNESS;
-      for (const side of [-1, 1]) {
-        const inner = origin.x + side * UPRIGHT_X;
-        const outer = origin.x + side * (UPRIGHT_X + UPRIGHT_WIDTH);
-        statics.push(rect(inner, footY, outer, beamTop, false));
-      }
-      statics.push(
-        rect(
-          origin.x - BEAM_HALF_WIDTH,
-          origin.y + beamY,
-          origin.x - BEAM_BORE_HALF_WIDTH,
-          beamTop,
-          true,
-        ),
-        rect(
-          origin.x + BEAM_BORE_HALF_WIDTH,
-          origin.y + beamY,
-          origin.x + BEAM_HALF_WIDTH,
-          beamTop,
-          true,
-        ),
-        bridge(beamY, BEAM_BORE_HALF_WIDTH, origin.x, origin.y),
-        bridge(
-          beamY + BEAM_THICKNESS,
-          BEAM_BORE_HALF_WIDTH,
-          origin.x,
-          origin.y,
-        ),
-      );
-    }
 
+    // The shank and its thread are ropes, not statics: their notches and
+    // curves slide with the screw's angle every frame.
     const ropes: Rope[] = [
+      {
+        id: "shank",
+        stroke: "ink",
+        strands: () =>
+          shankStrands(threadShift(screw.getAngle(), lead), lead, origin),
+      },
       {
         id: "thread",
         stroke: "soft",
-        strands: () => threadStrands(screw.getAngle(), lead, origin),
+        strands: () =>
+          threadStrands(threadShift(screw.getAngle(), lead), lead, origin),
       },
     ];
     if (layout.spring !== null) {
