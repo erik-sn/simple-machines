@@ -1,5 +1,6 @@
 import { Box, RevoluteJoint, RopeJoint, Vec2 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
+import { blockRingPoint, blockShapes } from "../parts";
 import { ForceSampler } from "../sampler";
 import type {
   Machine,
@@ -211,49 +212,10 @@ export const leverScene: SceneDefinition = {
         : {
             id: "weight",
             body: weight,
-            shapes: [
-              // A block seen a little from above and the right: front, top,
-              // and a hatched right face, as a plate would draw it.
-              {
-                kind: "polygon",
-                points: [
-                  { x: -WEIGHT_HALF, y: -WEIGHT_HALF },
-                  { x: WEIGHT_HALF, y: -WEIGHT_HALF },
-                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
-                  { x: -WEIGHT_HALF, y: WEIGHT_HALF },
-                ],
-                closed: true,
-              },
-              {
-                kind: "polygon",
-                points: [
-                  { x: -WEIGHT_HALF, y: WEIGHT_HALF },
-                  { x: -WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
-                  { x: WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
-                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
-                ],
-                closed: true,
-              },
-              {
-                kind: "polygon",
-                points: [
-                  { x: WEIGHT_HALF, y: -WEIGHT_HALF },
-                  { x: WEIGHT_HALF + 0.07, y: -WEIGHT_HALF + 0.05 },
-                  { x: WEIGHT_HALF + 0.07, y: WEIGHT_HALF + 0.05 },
-                  { x: WEIGHT_HALF, y: WEIGHT_HALF },
-                ],
-                closed: true,
-                fill: true,
-                hatch: { angle: 70 },
-              },
-              // A ring on top that the rope ties into.
-              {
-                kind: "circle",
-                center: { x: 0.035, y: WEIGHT_HALF + 0.05 },
-                radius: 0.05,
-                stroke: "soft",
-              },
-            ],
+            shapes: blockShapes({
+              halfWidth: WEIGHT_HALF,
+              halfHeight: WEIGHT_HALF,
+            }),
           };
 
     // A post on a plinth carries the pin, as the plates draw it; the textbook
@@ -339,7 +301,8 @@ export const leverScene: SceneDefinition = {
       if (weight === null) {
         return ropeFrom();
       }
-      const p = weight.getWorldPoint(new Vec2(0.035, WEIGHT_HALF + 0.1));
+      const ring = blockRingPoint(WEIGHT_HALF, WEIGHT_HALF);
+      const p = weight.getWorldPoint(new Vec2(ring.x, ring.y));
       return { x: p.x, y: p.y };
     };
 

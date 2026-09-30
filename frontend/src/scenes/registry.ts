@@ -1,5 +1,6 @@
 import type { MachineKind, SceneKind } from "../book/chapters";
 import type { MachineModule, SceneDefinition } from "../physics/types";
+import { frontispieceScene } from "./frontispiece";
 
 // Every file in physics/machines exports `machine`; the registry collects
 // them, so adding a machine never touches this file. A kind missing here
@@ -26,12 +27,7 @@ for (const [path, module] of Object.entries(modules)) {
 
 export function sceneFor(kind: SceneKind): SceneDefinition | undefined {
   if (kind === "frontispiece") {
-    const lever = byKind.get("lever");
-    if (lever === undefined) {
-      return undefined;
-    }
-    // The title page carries the title at the head and the plate below.
-    return { ...lever, camera: { ...lever.camera, y: 0.5 } };
+    return frontispieceScene;
   }
   if (kind === "theatre") {
     return undefined;

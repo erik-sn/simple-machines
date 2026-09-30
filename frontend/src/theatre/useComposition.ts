@@ -5,6 +5,7 @@ import {
   EMPTY_COMPOSITION,
   encodeComposition,
 } from "./composition";
+import { seedComposition } from "./seed";
 
 const SESSION_KEY = "simple-machines:bench";
 
@@ -61,7 +62,11 @@ export function useComposition(): {
       decodeComposition(hash).then(
         (composition) => {
           if (!cancelled) {
-            setState({ composition, ready: true, error: null });
+            setState({
+              composition: hash === "" ? seedComposition() : composition,
+              ready: true,
+              error: null,
+            });
           }
         },
         (error: unknown) => {

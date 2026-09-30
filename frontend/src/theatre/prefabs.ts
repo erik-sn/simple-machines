@@ -1,4 +1,5 @@
 import { Box, Vec2 } from "planck";
+import { blockRingPoint, blockShapes } from "../physics/parts";
 import type { Machine, SceneDefinition } from "../physics/types";
 import { machineScene } from "../scenes/registry";
 import type { SettingSpec } from "../scenes/settings";
@@ -8,6 +9,7 @@ import type { TheatreKind } from "./composition";
 // a weight (the load) and a hook (a point fixed to the page).
 
 const WEIGHT_HALF = 0.16;
+const RING = blockRingPoint(WEIGHT_HALF, WEIGHT_HALF);
 
 const WEIGHT_SETTINGS: readonly SettingSpec[] = [
   {
@@ -44,25 +46,7 @@ const weightScene: SceneDefinition = {
           id: "block",
           body,
           shapes: [
-            {
-              kind: "polygon",
-              points: [
-                { x: -WEIGHT_HALF, y: -WEIGHT_HALF },
-                { x: WEIGHT_HALF, y: -WEIGHT_HALF },
-                { x: WEIGHT_HALF, y: WEIGHT_HALF },
-                { x: -WEIGHT_HALF, y: WEIGHT_HALF },
-              ],
-              closed: true,
-              fill: true,
-            },
-            {
-              kind: "arc",
-              center: { x: 0, y: WEIGHT_HALF },
-              radius: 0.05,
-              start: 0,
-              end: Math.PI,
-              stroke: "soft",
-            },
+            ...blockShapes({ halfWidth: WEIGHT_HALF, halfHeight: WEIGHT_HALF }),
             // A pinned weight shows the pin that holds it to the page.
             ...(pinned
               ? [
@@ -85,14 +69,14 @@ const weightScene: SceneDefinition = {
           id: "eye",
           kind: "pin",
           part: "block",
-          at: { x: 0, y: WEIGHT_HALF + 0.05 },
+          at: { x: RING.x, y: RING.y - 0.05 },
           role: "load",
         },
         {
           id: "rope-end",
           kind: "ropeEnd",
           part: "block",
-          at: { x: 0, y: WEIGHT_HALF + 0.16 },
+          at: { x: RING.x, y: RING.y + 0.02 },
           role: "load",
         },
         {

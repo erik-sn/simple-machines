@@ -7,6 +7,7 @@ import {
   Vec2,
 } from "planck";
 import type { SettingSpec, SettingValues } from "../../scenes/settings";
+import { blockRingPoint, blockShapes } from "../parts";
 import { ForceSampler } from "../sampler";
 import type {
   Keyframe,
@@ -64,6 +65,15 @@ const DROP_LIMIT = 0.2;
 const HOOK_CLEARANCE = 0.06;
 const TURN = (100 * Math.PI) / 180;
 const PIN_RADIUS = 0.035;
+// Drawing only: the pin through the crank's handle, the bearing's collar, and
+// the drum's shadow crescent (inner radius as a fraction of the drum's, swept
+// over its lower right since the light comes from the upper left).
+const HANDLE_PIN_RADIUS = 0.025;
+const COLLAR_RADIUS = 0.06;
+const DRUM_SHADOW_INNER = 0.68;
+const DRUM_SHADOW_START = (-110 * Math.PI) / 180;
+const DRUM_SHADOW_END = (20 * Math.PI) / 180;
+const DRUM_SHADOW_STEPS = 12;
 // Fixtures of one machine never touch: in this side view the rope and the
 // load hang in front of the wheel's face.
 const GROUP = -2;
@@ -184,9 +194,15 @@ function wheelShapes(
           { x: -across.x, y: -across.y },
         ],
         closed: true,
-        fill: true,
       },
-      { kind: "circle", center: tip, radius: KNOB_RADIUS, fill: true },
+      { kind: "circle", center: tip, radius: KNOB_RADIUS },
+      // The pin through the handle.
+      {
+        kind: "circle",
+        center: tip,
+        radius: HANDLE_PIN_RADIUS,
+        stroke: "soft",
+      },
     );
   } else {
     shapes.push(
@@ -207,6 +223,7 @@ function wheelShapes(
           kind: "segment",
           from: onCircle(inner, angle),
           to: onCircle(outer, angle),
+          stroke: "soft",
         });
       }
     }
@@ -214,12 +231,12 @@ function wheelShapes(
       shapes.push({ kind: "circle", center: ZERO, radius: HUB_RADIUS });
     }
   }
-  // The drum, a solid cylinder end; its hatching turns with it.
+  // The drum's end, outline only: its shadow is drumShadow, a static on the
+  // plate, so it does not turn with the drum.
   shapes.push({
     kind: "circle",
     center: ZERO,
     radius: axleRadius - ROPE_INSET,
-    fill: true,
   });
   return shapes;
 }
@@ -241,19 +258,64 @@ function hookShapes(standalone: boolean): Shape[] {
     },
   ];
   if (standalone) {
-    shapes.push({
-      kind: "polygon",
-      points: [
-        { x: -WEIGHT_HALF, y: BLOCK_TOP },
-        { x: WEIGHT_HALF, y: BLOCK_TOP },
-        { x: WEIGHT_HALF, y: BLOCK_TOP - 2 * WEIGHT_HALF },
-        { x: -WEIGHT_HALF, y: BLOCK_TOP - 2 * WEIGHT_HALF },
-      ],
-      closed: true,
-      fill: true,
-    });
+    // The book's shared block, placed so its ring meets the foot of the stem.
+    const ring = blockRingPoint(WEIGHT_HALF, WEIGHT_HALF);
+    shapes.push(
+      ...shift(
+        blockShapes({ halfWidth: WEIGHT_HALF, halfHeight: WEIGHT_HALF }),
+        { x: HOOK_RADIUS - ring.x, y: BLOCK_TOP - ring.y },
+      ),
+    );
   }
   return shapes;
+}
+
+// Moves shapes by an offset within their frame.
+function shift(shapes: readonly Shape[], by: Vec): Shape[] {
+  const move = (p: Vec): Vec => ({ x: p.x + by.x, y: p.y + by.y });
+  return shapes.map((shape): Shape => {
+    if (shape.kind === "segment") {
+      return { ...shape, from: move(shape.from), to: move(shape.to) };
+    }
+    if (shape.kind === "polygon") {
+      return { ...shape, points: shape.points.map(move) };
+    }
+    return { ...shape, center: move(shape.center) };
+  });
+}
+
+// The drum's shadow: a hatched crescent over its lower right, drawn in world
+// coordinates as a band with no outline, the way an engraver tones a cylinder.
+function drumShadow(centre: Vec, radius: number): Shape {
+  const inner = DRUM_SHADOW_INNER * radius;
+  const rim = (r: number, angle: number): Vec => ({
+    x: centre.x + r * Math.cos(angle),
+    y: centre.y + r * Math.sin(angle),
+  });
+  const points: Vec[] = [];
+  for (let i = 0; i < DRUM_SHADOW_STEPS; i += 1) {
+    const t = i / (DRUM_SHADOW_STEPS - 1);
+    points.push(
+      rim(
+        radius,
+        DRUM_SHADOW_START + t * (DRUM_SHADOW_END - DRUM_SHADOW_START),
+      ),
+    );
+  }
+  for (let i = DRUM_SHADOW_STEPS - 1; i >= 0; i -= 1) {
+    const t = i / (DRUM_SHADOW_STEPS - 1);
+    points.push(
+      rim(inner, DRUM_SHADOW_START + t * (DRUM_SHADOW_END - DRUM_SHADOW_START)),
+    );
+  }
+  return {
+    kind: "polygon",
+    points,
+    closed: true,
+    fill: true,
+    outline: false,
+    hatch: { angle: 45 },
+  };
 }
 
 // Appends keyframes along the circle from one angle to another, eased so the
@@ -409,12 +471,16 @@ export const wheelAndAxleScene: SceneDefinition = {
       body: hook,
       shapes: hookShapes(context.standalone),
     };
-    const pin: Shape = {
-      kind: "circle",
-      center: at(0, 0),
-      radius: PIN_RADIUS,
-      stroke: "soft",
-    };
+    // The bearing: the axle's end and its collar.
+    const bearing: Shape[] = [
+      { kind: "circle", center: at(0, 0), radius: PIN_RADIUS, stroke: "soft" },
+      {
+        kind: "circle",
+        center: at(0, 0),
+        radius: COLLAR_RADIUS,
+        stroke: "soft",
+      },
+    ];
 
     const effortSampler = new ForceSampler();
     const tensionSampler = new ForceSampler();
@@ -442,8 +508,8 @@ export const wheelAndAxleScene: SceneDefinition = {
 
     const machine: Machine = {
       parts: [wheelPart, hookPart],
-      ropes: [{ id: "rope", strands: ropeStrands }],
-      statics: [pin],
+      ropes: [{ id: "rope", strands: ropeStrands, stroke: "soft" }],
+      statics: [...bearing, drumShadow(at(0, 0), axleRadius - ROPE_INSET)],
       ports: [
         {
           id: "rim",
