@@ -1,4 +1,4 @@
-import type { Shape, Vec } from "../types";
+import type { Shape, Vec } from "./types";
 
 // The one object on every plate: a block seen a little from above and the
 // right, front plain, top plain, right face hatched, a ring on top for the

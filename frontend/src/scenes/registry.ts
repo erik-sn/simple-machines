@@ -11,6 +11,11 @@ const modules = import.meta.glob<MachineModule>("../physics/machines/*.ts", {
 
 const byKind = new Map<MachineKind, SceneDefinition>();
 for (const [path, module] of Object.entries(modules)) {
+  if (module === undefined) {
+    throw new Error(
+      `${path} does not export a machine; only machines live in physics/machines`,
+    );
+  }
   if (byKind.has(module.kind)) {
     throw new Error(
       `Two machine files claim the kind ${module.kind} (${path})`,

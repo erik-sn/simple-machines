@@ -484,16 +484,19 @@ dialog::backdrop {
 /* The bench list: each machine drawn small, its name beneath. Along the
    left on wide pages, along the top on phones. */
 .bench {
-  top: 50%;
+  top: calc(var(--inset-top) + 2.5rem);
   left: 1.5rem;
-  transform: translateY(-50%);
+  max-height: calc(100svh - var(--inset-top) - 2.5rem - var(--foot) - 3rem);
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 @media (max-width: 640px) {
   .bench {
     top: 10svh;
     left: 0.5rem;
     right: 0.5rem;
-    transform: none;
+    max-height: none;
+    overflow: visible;
   }
 }
 .bench-list {
@@ -502,8 +505,8 @@ dialog::backdrop {
   gap: 0.25rem;
 }
 .bench-item svg {
-  width: 96px;
-  height: 64px;
+  width: 80px;
+  height: 54px;
 }
 .bench-item {
   display: flex;
