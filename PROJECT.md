@@ -40,7 +40,7 @@ An elegant, subtle, book-like interactive treatise on the six classical simple m
 ## Known template gaps (bootstrap's to fix, noted here so nobody re-diagnoses them)
 
 - A frontend-only generation seeds a journey spec that needs the backend; removed here.
-- The answers file records an SSH template source, which CI cannot clone, so the template-check job fails in CI until the source is https (or CI gets a deploy key).
+- The answers file records an SSH template source, which CI cannot clone, so the template-check job fails in CI. tools/template_check.py routes TEMPLATE_TOKEN (CI passes the RENOVATE_TOKEN secret) only for https or gh: sources, and bootstrap is private: the fix is an https `_src_path` plus that secret.
 - The github_owner answer was recorded as a full repo path; corrected to the bare owner so images publish under ghcr.io/erik-sn.
 - .github/workflows/osv-scan.yml calls google/osv-scanner-action's reusable workflow at `@v2`, a ref that repository does not have (its tags are v2.x.y), so every run fails before a job starts. Pin a full tag upstream (v2.6.0 is the newest as of 2026-09-30); the file is template-managed, so it is not fixed here.
 
