@@ -14,17 +14,17 @@ interface Placement {
 }
 
 const PLACEMENTS: readonly Placement[] = [
-  { kind: "lever", origin: { x: -2.7, y: 0.9 } },
-  { kind: "pulley", variant: "tackle", origin: { x: 0.2, y: 0.6 } },
-  { kind: "wheel-and-axle", variant: "windlass", origin: { x: 3.2, y: 1.0 } },
-  { kind: "wedge", variant: "log", origin: { x: -3.0, y: -1.4 } },
+  { kind: "lever", origin: { x: -3.3, y: -0.35 } },
   { kind: "screw", origin: { x: 0, y: -1.5 } },
-  { kind: "inclined-plane", origin: { x: 2.2, y: -1.5 } },
+  { kind: "wheel-and-axle", variant: "windlass", origin: { x: 3.3, y: -0.9 } },
+  { kind: "wedge", variant: "log", origin: { x: -3.3, y: -3.9 } },
+  { kind: "pulley", variant: "tackle", origin: { x: 0.2, y: -4.1 } },
+  { kind: "inclined-plane", origin: { x: 3.1, y: -4.2 } },
 ];
 
 export const frontispieceScene: SceneDefinition = {
   settings: [],
-  camera: { x: 0, y: 1.3, height: 4.2, width: 9.4 },
+  camera: { x: 0, y: -1.5, height: 8.8, width: 11.4 },
   build(world, page, _values, _variant, context) {
     const built = PLACEMENTS.map((placement) => {
       const scene = machineScene(placement.kind);
